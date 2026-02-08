@@ -1,7 +1,114 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+
+const club = {
+  name: "Happy Mile Club",
+  location: "Austin, TX",
+  mission:
+    "Make running feel simple again: show up, move together, and leave with more energy than you arrived with.",
+} as const;
+
 export default function AboutPage() {
-    return (
-        <div>
-            <h1>About</h1>
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
+      <div className="max-w-3xl space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary">{club.location}</Badge>
+          <Badge>All paces</Badge>
+          <Badge variant="outline">Weekly runs</Badge>
         </div>
-    );
+
+        <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+          About {club.name}
+        </h1>
+
+        <p className="text-balance text-base text-muted-foreground leading-relaxed">
+          {club.mission}
+        </p>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button asChild>
+            <Link href="../#join">Join club</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="../events">See events</Link>
+          </Button>
+        </div>
+      </div>
+
+      <Separator className="my-10" />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Community-first</CardTitle>
+            <CardDescription>
+              We prioritize consistency, kindness, and connection over ego.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Clear logistics</CardTitle>
+            <CardDescription>
+              Simple routes, obvious meeting points, and helpful reminders.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Better together</CardTitle>
+            <CardDescription>
+              Whether it&apos;s your first mile or your fiftieth, you belong here.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold tracking-tight">Our story</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Happy Mile started as a small group text: “Easy 3 at sunrise?” A few
+            weeks later, the run became a ritual — the kind that makes your whole
+            week feel lighter.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Today, we keep the same promise: no complicated rules, no pressure,
+            and no one left behind. We regroup often, celebrate small wins, and
+            usually end with coffee.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold tracking-tight">What to expect</h2>
+          <div className="grid gap-3">
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <div className="font-medium">Arrive early</div>
+              <div className="text-sm text-muted-foreground">
+                We start on time. Aim for 10 minutes early to say hi.
+              </div>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <div className="font-medium">Choose your pace</div>
+              <div className="text-sm text-muted-foreground">
+                Run, jog, walk — it&apos;s all movement. We regroup often.
+              </div>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <div className="font-medium">Stay after</div>
+              <div className="text-sm text-muted-foreground">
+                Optional, but highly recommended: coffee, snacks, and good
+                conversations.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

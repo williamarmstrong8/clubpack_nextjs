@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import "./marketing.css";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 

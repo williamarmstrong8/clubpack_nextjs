@@ -1,0 +1,84 @@
+/* Marketing-only animations/utilities. */
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-marquee-left,
+  .cp-marquee-right,
+  .cp-vertical-marquee-up,
+  .cp-vertical-marquee-down,
+  .animate-scroll {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.animate-scroll {
+  animation: cp-scroll 20s linear infinite;
+}
+
+@keyframes cp-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.cp-marquee-left {
+  animation: cp-marquee-left 20s linear infinite;
+}
+
+@keyframes cp-marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.cp-marquee-right {
+  animation: cp-marquee-right 20s linear infinite;
+}
+
+@keyframes cp-marquee-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.cp-vertical-marquee-up {
+  animation-name: cp-vertical-marquee-up;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes cp-vertical-marquee-up {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.cp-vertical-marquee-down {
+  animation-name: cp-vertical-marquee-down;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes cp-vertical-marquee-down {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
