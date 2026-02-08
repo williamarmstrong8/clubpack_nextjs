@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const APP_ORIGIN = "https://my.joinclubpack.com";
 
@@ -138,23 +139,31 @@ export default function Navbar() {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <a
-                href={`${APP_ORIGIN}/login`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 px-4 py-2 rounded-full text-sm hover:text-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              <Button
+                asChild
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-300 px-4 py-2 rounded-full text-sm"
               >
-                Login
-              </a>
-              <a
-                href={`${APP_ORIGIN}/signup`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-1.5 rounded-md text-sm text-white transition-all duration-200 focus:outline-none hover:opacity-90"
-                style={{ backgroundColor: "#0054f9" }}
+                <a
+                  href={`${APP_ORIGIN}/login`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Login
+                </a>
+              </Button>
+              <Button
+                asChild
+                className="h-8 px-4 rounded-md text-sm text-white bg-[#0054f9] hover:bg-[#0040d6]"
               >
-                Join for Free
-              </a>
+                <a
+                  href={`${APP_ORIGIN}/signup`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Join for Free
+                </a>
+              </Button>
             </div>
 
             <button
@@ -213,25 +222,33 @@ export default function Navbar() {
               </div>
 
               <div className="pt-4 space-y-2">
-                <a
-                  href={`${APP_ORIGIN}/login`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full text-center text-gray-400 px-4 py-2 rounded-full text-sm hover:text-gray-300 transition-all"
-                  onClick={() => setMobileOpen(false)}
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-center text-gray-400 hover:text-gray-300 px-4 py-2 rounded-full text-sm"
                 >
-                  Login
-                </a>
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full text-center px-4 py-2 rounded-md text-sm text-white hover:opacity-90 transition-all"
-                  style={{ backgroundColor: "#0054f9" }}
-                  onClick={() => setMobileOpen(false)}
+                  <a
+                    href={`${APP_ORIGIN}/login`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Login
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  className="w-full bg-[#0054f9] hover:bg-[#0040d6] text-white px-4 py-2 rounded-md text-sm"
                 >
-                  Start Building Free
-                </a>
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Start Building Free
+                  </a>
+                </Button>
               </div>
             </div>
           </div>

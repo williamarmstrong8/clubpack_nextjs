@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export const metadata = {
   title: "Features",
@@ -154,20 +156,25 @@ export default function FeaturesPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a
-              href={`${APP_ORIGIN}/signup`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-[#0054f9] hover:bg-[#0040d6] text-white px-8 py-3 rounded-xl font-normal text-base transition-colors duration-200 shadow-sm hover:shadow-md"
+            <Button
+              asChild
+              className="h-auto bg-[#0054f9] hover:bg-[#0040d6] text-white px-8 py-3 rounded-xl font-normal text-base transition-colors duration-200 shadow-sm hover:shadow-md"
             >
-              Start Building Free
-            </a>
-            <Link
-              href="/pricing"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-900 px-8 py-3 rounded-xl font-normal text-base transition-colors duration-200"
+              <a
+                href={`${APP_ORIGIN}/signup`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Start Building Free
+              </a>
+            </Button>
+            <Button
+              asChild
+              variant="secondary"
+              className="h-auto bg-gray-100 hover:bg-gray-200 text-gray-900 px-8 py-3 rounded-xl font-normal text-base transition-colors duration-200"
             >
-              View Pricing
-            </Link>
+              <Link href="/pricing">View Pricing</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -271,9 +278,9 @@ export default function FeaturesPage() {
                 eta: "Q1 2026",
               },
             ].map((item) => (
-              <div
+              <Card
                 key={item.title}
-                className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-shadow duration-300"
+                className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-shadow duration-300 gap-0"
               >
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
                   {item.title}
@@ -284,7 +291,7 @@ export default function FeaturesPage() {
                 <div className="text-sm font-bold text-[#0054f9]">
                   Expected: {item.eta}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -311,20 +318,25 @@ export default function FeaturesPage() {
                 communities.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white text-[#0054f9] hover:bg-gray-50 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-1 active:scale-[0.98] w-full sm:w-auto"
+                <Button
+                  asChild
+                  className="h-auto bg-white text-[#0054f9] hover:bg-gray-50 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-1 active:scale-[0.98] w-full sm:w-auto"
                 >
-                  Get Started Free
-                </a>
-                <Link
-                  href="/pricing"
-                  className="bg-transparent text-white border-2 border-white/20 hover:bg-white/5 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-200 w-full sm:w-auto backdrop-blur-sm"
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get Started Free
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto bg-transparent text-white border-2 border-white/20 hover:bg-white/5 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-200 w-full sm:w-auto backdrop-blur-sm"
                 >
-                  View Pricing
-                </Link>
+                  <Link href="/pricing">View Pricing</Link>
+                </Button>
               </div>
             </div>
           </div>

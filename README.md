@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Supabase + Admin Dashboard
+
+This app uses **Supabase SSR cookie auth** (via `@supabase/ssr`) and a Next.js **Proxy** (`proxy.ts`) for session refresh + route protection.
+
+### Environment variables
+
+Copy `./.env.example` to `./.env.local` and fill in:
+
+- `NEXT_PUBLIC_ROOT_DOMAIN`: root domain used by the subdomain proxy (use `localhost` for local dev)
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Supabase publishable key (you can paste your legacy anon key value here during the transition)
+
+### Admin URLs
+
+- Admin dashboard is served from **`my.<rootDomain>`**
+- Admin auth pages live at **`/auth/login`** and **`/auth/sign-up`** (only reachable on `my.*` via proxy routing)
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

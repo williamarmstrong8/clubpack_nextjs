@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { copySupabaseCookies, updateSession } from "@/lib/supabase/proxy";
 
 // --- HELPER FUNCTIONS ---
 
@@ -52,7 +53,9 @@ function getSubdomain(hostname: string, rootDomain: string): string | null {
 
 // --- MAIN PROXY FUNCTION ---
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
+  const { supabaseResponse, claims } = await updateSession(req);
+
   const hostname = normalizeHostname(req.headers.get("host"));
   const envRootDomain = normalizeRootDomain(process.env.NEXT_PUBLIC_ROOT_DOMAIN);
 
@@ -85,6 +88,17 @@ export function proxy(req: NextRequest) {
   // match routes like `/:site` and send you to the club site).
 
   const firstSegment = path.split("/")[1] ?? "";
+  const isAuthRoute = path === "/auth" || path.startsWith("/auth/");
+
+  const userId =
+    claims && typeof claims.sub === "string" && claims.sub.length > 0
+      ? claims.sub
+      : null;
+
+  const withSupabaseCookies = (res: NextResponse) => {
+    copySupabaseCookies(supabaseResponse, res);
+    return res;
+  };
 
   const ADMIN_ROOT_SEGMENTS = new Set([
     "account",
@@ -98,6 +112,7 @@ export function proxy(req: NextRequest) {
     "settings",
     "waivers",
     "website",
+    "auth",
   ]);
 
   const MARKETING_ROOT_SEGMENTS = new Set(["", "features", "pricing", "sponsors", "blog"]);
@@ -105,46 +120,72 @@ export function proxy(req: NextRequest) {
   // CASE 1: Admin App (my.<rootDomain>)
   // Enforce that admin pages only render on the `my` subdomain.
   if (subdomain === "my") {
+    // Auth gating for admin app.
+    if (!userId && !isAuthRoute) {
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = "/auth/login";
+      return withSupabaseCookies(NextResponse.redirect(loginUrl));
+    }
+
+    // If already logged in, keep users out of auth pages.
+    if (userId && isAuthRoute) {
+      const homeUrl = req.nextUrl.clone();
+      homeUrl.pathname = "/home";
+      return withSupabaseCookies(NextResponse.redirect(homeUrl));
+    }
+
     if (path === "/") {
       url.pathname = "/home";
-      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+      return withSupabaseCookies(
+        NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+      );
     }
 
     if (!ADMIN_ROOT_SEGMENTS.has(firstSegment)) {
       url.pathname = "/home";
-      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+      return withSupabaseCookies(
+        NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+      );
     }
 
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withSupabaseCookies(
+      NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+    );
   }
 
   // CASE 2: Tenant Club Sites (happy-mile.<rootDomain>)
   if (subdomain) {
     // Prevent double-prefix if someone navigates to `/{site}/*` directly on the tenant host.
     if (firstSegment === subdomain) {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return withSupabaseCookies(NextResponse.next({ request: { headers: requestHeaders } }));
     }
 
     // Club routes live at URL-space `/:site/*` (i.e. app/(club-site)/[site]/*)
     url.pathname = `/${encodeURIComponent(subdomain)}${path}`;
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withSupabaseCookies(
+      NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+    );
   }
 
   // CASE 3: Marketing / Root (root domain or localhost)
   // Enforce that tenant/admin routes are not reachable on the root domain.
   if (ADMIN_ROOT_SEGMENTS.has(firstSegment)) {
     url.pathname = "/";
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withSupabaseCookies(
+      NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+    );
   }
 
   // Only allow known marketing top-level routes on the root domain; otherwise
   // keep users on the marketing site root.
   if (!MARKETING_ROOT_SEGMENTS.has(firstSegment)) {
     url.pathname = "/";
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withSupabaseCookies(
+      NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+    );
   }
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  return withSupabaseCookies(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

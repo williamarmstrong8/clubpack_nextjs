@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { LogOut, Settings, UserRound } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -13,14 +14,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { createClient } from "@/lib/supabase/client"
 
-const mockAdmin = {
-  name: "Club Admin",
-  role: "Admin",
-}
+export function AdminUserMenu({
+  user,
+}: {
+  user?: { name: string; role: string }
+}) {
+  const router = useRouter()
+  const name = user?.name ?? "Admin"
+  const role = user?.role ?? "Admin"
 
-export function AdminUserMenu() {
-  const initials = mockAdmin.name
+  const initials = name
     .split(" ")
     .filter(Boolean)
     .map((p) => p[0]?.toUpperCase())
@@ -35,8 +40,8 @@ export function AdminUserMenu() {
             <AvatarFallback className="text-xs">{initials || "A"}</AvatarFallback>
           </Avatar>
           <div className="hidden text-left leading-tight md:block">
-            <div className="text-sm font-medium">{mockAdmin.name}</div>
-            <div className="text-xs text-muted-foreground">{mockAdmin.role}</div>
+            <div className="text-sm font-medium">{name}</div>
+            <div className="text-xs text-muted-foreground">{role}</div>
           </div>
         </Button>
       </DropdownMenuTrigger>
@@ -54,7 +59,13 @@ export function AdminUserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onSelect={() => console.log("Sign out (mock)")}
+          onSelect={async (e) => {
+            e.preventDefault()
+            const supabase = createClient()
+            await supabase.auth.signOut()
+            router.push("/auth/login")
+            router.refresh()
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign out

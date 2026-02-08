@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export const metadata = {
   title: "Pricing",
@@ -139,9 +141,9 @@ export default function PricingPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {plans.map((plan) => (
-              <div
+              <Card
                 key={plan.name}
-                className={`bg-white rounded-2xl p-8 shadow-xl border transition-shadow duration-300 h-full flex flex-col ${
+                className={`bg-white rounded-2xl p-8 shadow-xl border transition-shadow duration-300 h-full flex flex-col gap-0 ${
                   plan.popular
                     ? "border-blue-200 shadow-[0_24px_48px_-16px_rgba(0,84,249,0.25)]"
                     : "border-gray-100 hover:shadow-2xl"
@@ -197,32 +199,36 @@ export default function PricingPage() {
 
                 <div className="mt-auto">
                   {plan.href.startsWith("http") ? (
-                    <a
-                      href={plan.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                    <Button
+                      asChild
+                      className={`w-full h-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
                         plan.popular
                           ? "bg-[#0054f9] hover:bg-[#0040d6] text-white shadow-sm hover:shadow-md"
                           : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                       }`}
                     >
-                      {plan.cta}
-                    </a>
+                      <a
+                        href={plan.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {plan.cta}
+                      </a>
+                    </Button>
                   ) : (
-                    <Link
-                      href={plan.href}
-                      className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                    <Button
+                      asChild
+                      className={`w-full h-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
                         plan.popular
                           ? "bg-[#0054f9] hover:bg-[#0040d6] text-white shadow-sm hover:shadow-md"
                           : "bg-gray-100 hover:bg-gray-200 text-gray-900"
                       }`}
                     >
-                      {plan.cta}
-                    </Link>
+                      <Link href={plan.href}>{plan.cta}</Link>
+                    </Button>
                   )}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>

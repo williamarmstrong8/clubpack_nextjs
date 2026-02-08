@@ -1,4 +1,10 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const APP_ORIGIN = "https://my.joinclubpack.com";
 
@@ -8,7 +14,7 @@ const MESSAGES = [
     app: "Instagram",
     logo: "/logos/Instagram_icon.png",
     user: "@run_member",
-    text: "Tagged you in a story: 'Best workout with the club!'",
+    text: "Tagged you in a story: 'Best workout with the club! 🔥'",
     time: "2m ago",
   },
   {
@@ -24,8 +30,24 @@ const MESSAGES = [
     app: "Eventbrite",
     logo: "/logos/eventbrite.png",
     user: "Ticket Sales",
-    text: "New order: 3 VIP tickets sold. $150.00 total.",
+    text: "New order: 3 VIP tickets sold for the Gala. $150.00 total.",
     time: "12m ago",
+  },
+  {
+    id: 4,
+    app: "Partiful",
+    logo: "/logos/partiful.png",
+    user: "RSVP Update",
+    text: "Sarah and 2 others RSVP'd for 'Weekend Hike'.",
+    time: "20m ago",
+  },
+  {
+    id: 5,
+    app: "Instagram",
+    logo: "/logos/Instagram_icon.png",
+    user: "@new_member",
+    text: "DM: 'What's the best way to sign up for next month?'",
+    time: "45m ago",
   },
 ];
 
@@ -41,7 +63,75 @@ const appLogos = [
   { name: "Instagram", src: "/logos/Instagram_icon.png" },
 ];
 
+function NotificationAnimation() {
+  const [visibleMessages, setVisibleMessages] = useState(MESSAGES.slice(0, 3));
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+
+    let currentIndex = 3;
+    const interval = setInterval(() => {
+      const nextMessageIndex = currentIndex % MESSAGES.length;
+      const nextMessage = { ...MESSAGES[nextMessageIndex], id: Date.now() };
+      setVisibleMessages((prev) => [nextMessage, ...prev.slice(0, 2)]);
+      currentIndex++;
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [prefersReducedMotion]);
+
+  return (
+    <div className="flex flex-col gap-4 h-full justify-start pt-2 overflow-hidden relative px-8">
+      <AnimatePresence initial={false} mode="popLayout">
+        {visibleMessages.map((msg, idx) => (
+          <motion.div
+            key={msg.id}
+            initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(0px)" }}
+            animate={{
+              opacity: idx === 0 ? 1 : idx === 1 ? 0.7 : 0.4,
+              y: 0,
+              scale: idx === 0 ? 1 : idx === 1 ? 0.96 : 0.92,
+              filter: `blur(${idx === 0 ? 0 : idx === 1 ? 1.5 : 5}px)`,
+            }}
+            exit={{ opacity: 0, y: 40, scale: 0.8, filter: "blur(12px)" }}
+            transition={{ duration: 1.5, ease: [0.32, 0.72, 0, 1] }}
+            layout
+            className="bg-white/90 backdrop-blur-sm p-3.5 rounded-[24px] shadow-sm border border-gray-100 flex items-center gap-4"
+          >
+            <div className="flex-shrink-0 w-12 h-12 relative">
+              <Image
+                src={msg.logo}
+                alt={msg.app}
+                fill
+                sizes="48px"
+                className="object-contain rounded-xl"
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex justify-between items-baseline mb-0.5">
+                <span className="font-bold text-[15px] text-gray-900 truncate">
+                  {msg.app}
+                </span>
+                <span className="text-[11px] text-gray-400 whitespace-nowrap ml-2">
+                  {msg.time}
+                </span>
+              </div>
+              <p className="text-[13px] text-gray-600 leading-tight line-clamp-2">
+                <span className="font-semibold text-gray-700">{msg.user}</span>{" "}
+                {msg.text}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function ProblemSection() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <section className="pt-24 pb-12 bg-gray-50">
       <div className="max-w-[1440px] mx-auto px-8 sm:px-12 lg:px-16 w-full">
@@ -57,7 +147,7 @@ export default function ProblemSection() {
 
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+            <Card className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full gap-0">
               <div className="flex-1">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   Too many softwares
@@ -66,14 +156,19 @@ export default function ProblemSection() {
                   Running a club requires juggling multiple tools with scattered
                   logins and details across different platforms.
                 </p>
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-4 transition-colors duration-200"
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="h-auto inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-4 transition-colors duration-200"
                 >
-                  Explore our solution
-                </a>
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Explore our solution
+                  </a>
+                </Button>
               </div>
 
               <div className="space-y-3 -mx-8 mb-8 mt-auto overflow-hidden">
@@ -119,9 +214,9 @@ export default function ProblemSection() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+            <Card className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full gap-0">
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-gray-900 mb-2">
                   No club analytics
@@ -130,30 +225,132 @@ export default function ProblemSection() {
                   Clubs struggle to understand performance, member engagement,
                   and growth without clear data.
                 </p>
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-4 transition-colors duration-200"
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="h-auto inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-4 transition-colors duration-200"
                 >
-                  Get better analytics
-                </a>
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get better analytics
+                  </a>
+                </Button>
               </div>
 
               <div className="-mx-8 mb-0 mt-auto pt-8 pb-8">
                 <div className="flex items-end justify-center gap-2 h-48">
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[55%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[75%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[92%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[65%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[85%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[97%]" />
-                  <div className="w-8 bg-gray-200 rounded-t-sm h-[70%]" />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["55%", "60%", "53%", "57%", "55%"] }
+                    }
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    style={{ height: "55%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["75%", "70%", "78%", "73%", "75%"] }
+                    }
+                    transition={{
+                      duration: 4.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.3,
+                    }}
+                    style={{ height: "75%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["92%", "95%", "90%", "94%", "92%"] }
+                    }
+                    transition={{
+                      duration: 4.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.6,
+                    }}
+                    style={{ height: "92%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["65%", "63%", "68%", "64%", "65%"] }
+                    }
+                    transition={{
+                      duration: 4.7,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.9,
+                    }}
+                    style={{ height: "65%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["85%", "88%", "83%", "86%", "85%"] }
+                    }
+                    transition={{
+                      duration: 4.3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.2,
+                    }}
+                    style={{ height: "85%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["97%", "95%", "99%", "96%", "97%"] }
+                    }
+                    transition={{
+                      duration: 4.6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.5,
+                    }}
+                    style={{ height: "97%" }}
+                  />
+                  <motion.div
+                    className="w-8 bg-gray-200 rounded-t-sm"
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { height: ["70%", "73%", "68%", "71%", "70%"] }
+                    }
+                    transition={{
+                      duration: 4.4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.8,
+                    }}
+                    style={{ height: "70%" }}
+                  />
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+            <Card className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col h-full gap-0">
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-gray-900 mb-2">
                   Communication chaos
@@ -162,51 +359,25 @@ export default function ProblemSection() {
                   Keeping members informed and aligned across multiple channels
                   is messy and time-consuming.
                 </p>
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-6 transition-colors duration-200"
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="h-auto inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-normal py-3 px-10 rounded-xl mb-6 transition-colors duration-200"
                 >
-                  Consolidate the chaos
-                </a>
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Consolidate the chaos
+                  </a>
+                </Button>
               </div>
 
-              <div className="space-y-3 -mx-8 -mb-2 px-8">
-                {MESSAGES.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="bg-white/90 backdrop-blur-sm p-3.5 rounded-[24px] shadow-sm border border-gray-100 flex items-center gap-4"
-                  >
-                    <div className="flex-shrink-0 w-12 h-12 relative">
-                      <Image
-                        src={msg.logo}
-                        alt={msg.app}
-                        fill
-                        sizes="48px"
-                        className="object-contain rounded-xl"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <span className="font-bold text-[15px] text-gray-900 truncate">
-                          {msg.app}
-                        </span>
-                        <span className="text-[11px] text-gray-400 whitespace-nowrap ml-2">
-                          {msg.time}
-                        </span>
-                      </div>
-                      <p className="text-[13px] text-gray-600 leading-tight line-clamp-2">
-                        <span className="font-semibold text-gray-700">
-                          {msg.user}
-                        </span>{" "}
-                        {msg.text}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="relative -mx-8 -mb-8 h-[320px] mt-auto">
+                <NotificationAnimation />
               </div>
-            </div>
+            </Card>
           </div>
 
           <div className="mt-6 lg:mt-8 relative rounded-2xl overflow-hidden shadow-lg h-[600px]">
@@ -229,14 +400,18 @@ export default function ProblemSection() {
                   community. ClubPack brings everything together in one place so
                   you can focus on what you do best—growing your club.
                 </p>
-                <a
-                  href={`${APP_ORIGIN}/signup`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center bg-[#0054f9] hover:bg-neutral-900 text-white text-base lg:text-md py-2 px-4 rounded-xl transition-colors duration-200"
+                <Button
+                  asChild
+                  className="h-auto inline-flex items-center justify-center bg-[#0054f9] hover:bg-neutral-900 text-white text-base lg:text-md py-2 px-4 rounded-xl transition-colors duration-200"
                 >
-                  Get started today
-                </a>
+                  <a
+                    href={`${APP_ORIGIN}/signup`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get started today
+                  </a>
+                </Button>
               </div>
             </div>
           </div>

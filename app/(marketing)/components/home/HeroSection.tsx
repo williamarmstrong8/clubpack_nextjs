@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const APP_ORIGIN = "https://my.joinclubpack.com";
 
@@ -33,21 +34,25 @@ export default function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <a
-              href={`${APP_ORIGIN}/signup`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              style={{ backgroundColor: "#0054f9" }}
+            <Button
+              asChild
+              className="h-auto bg-[#0054f9] hover:bg-[#0040d6] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:ring-blue-500/50"
             >
-              Start Building Free
-            </a>
-            <Link
-              href="/features"
-              className="text-gray-700 border border-gray-300 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              <a
+                href={`${APP_ORIGIN}/signup`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Start Building Free
+              </a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto text-gray-700 border-gray-300 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
             >
-              Watch Demo
-            </Link>
+              <Link href="/features">Watch Demo</Link>
+            </Button>
           </div>
         </div>
 

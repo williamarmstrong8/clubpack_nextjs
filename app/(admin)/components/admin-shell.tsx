@@ -30,7 +30,13 @@ function getAdminTitle(pathname: string) {
   return "Admin"
 }
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode
+  user?: { name: string; role: string }
+}) {
   const pathname = usePathname()
   const title = getAdminTitle(pathname)
 
@@ -47,7 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <h1 className="truncate text-sm font-semibold">{title}</h1>
           </div>
-          <AdminUserMenu />
+          <AdminUserMenu user={user} />
         </header>
         <div className="flex flex-1 flex-col p-4 md:p-6">{children}</div>
       </SidebarInset>
