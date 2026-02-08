@@ -1,33 +1,49 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-const club = {
-  name: "Happy Mile Club",
-  location: "Austin, TX",
-  mission:
-    "Make running feel simple again: show up, move together, and leave with more energy than you arrived with.",
-} as const;
+import { getClubBySubdomain } from "@/lib/data/club-site";
 
-export default function AboutPage() {
+export default async function AboutPage({
+  params,
+}: {
+  params: Promise<{ site: string }>;
+}) {
+  const { site } = await params
+  const club = await getClubBySubdomain(site);
+  if (!club) notFound();
+
+  const name =
+    (typeof club.name === "string" && club.name.trim()) ||
+    (typeof club.hero_headline === "string" && club.hero_headline.trim()) ||
+    site;
+  const location =
+    (typeof club.location === "string" && club.location.trim()) || "Local";
+  const mission =
+    (typeof club.description === "string" && club.description.trim()) ||
+    (typeof club.hero_subtext === "string" && club.hero_subtext.trim()) ||
+    (typeof club.tagline === "string" && club.tagline.trim()) ||
+    "Join us for weekly community events.";
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
       <div className="max-w-3xl space-y-4">
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{club.location}</Badge>
+          <Badge variant="secondary">{location}</Badge>
           <Badge>All paces</Badge>
           <Badge variant="outline">Weekly runs</Badge>
         </div>
 
         <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          About {club.name}
+          About {name}
         </h1>
 
         <p className="text-balance text-base text-muted-foreground leading-relaxed">
-          {club.mission}
+          {mission}
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

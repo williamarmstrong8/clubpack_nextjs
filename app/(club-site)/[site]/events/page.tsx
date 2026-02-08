@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,58 +12,62 @@ import {
 } from "@/components/ui/card";
 import { Calendar, Clock, MapPin } from "lucide-react";
 
-const events = [
-  {
-    slug: "sunrise-social-5k",
-    title: "Sunrise Social 5K",
-    dateLabel: "Tue, Feb 11",
-    time: "6:30 AM",
-    location: "Lady Bird Lake Trail",
-    runType: "5K",
-  },
-  {
-    slug: "hills-for-breakfast",
-    title: "Hills for Breakfast",
-    dateLabel: "Wed, Feb 12",
-    time: "6:15 AM",
-    location: "Austin High Steps",
-    runType: "Workout",
-  },
-  {
-    slug: "tempo-and-treats",
-    title: "Tempo + Treats",
-    dateLabel: "Thu, Feb 13",
-    time: "6:15 PM",
-    location: "Zilker Park",
-    runType: "Tempo",
-  },
-  {
-    slug: "social-shakeout",
-    title: "Social Shakeout",
-    dateLabel: "Fri, Feb 14",
-    time: "7:00 AM",
-    location: "South Congress",
-    runType: "Easy",
-  },
-  {
-    slug: "weekend-long-run",
-    title: "Weekend Long Run",
-    dateLabel: "Sat, Feb 15",
-    time: "8:00 AM",
-    location: "Mueller Lake Park",
-    runType: "Long Run",
-  },
-  {
-    slug: "coffee-mile",
-    title: "Coffee Mile",
-    dateLabel: "Sun, Feb 16",
-    time: "9:00 AM",
-    location: "Downtown Austin",
-    runType: "Fun Run",
-  },
-] as const;
+import { getClubBySubdomain, getUpcomingEventsByClubId, type EventRow } from "@/lib/data/club-site";
 
-export default function ClubEventsPage() {
+function formatEventDateLabel(isoDate: string | null) {
+  if (!isoDate) return "TBD";
+  const d = new Date(`${isoDate}T00:00:00`);
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatEventTime(t: string | null) {
+  const time = (t ?? "").trim();
+  if (!time) return "TBD";
+  if (/[ap]m$/i.test(time)) return time;
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
+    const date = new Date(`1970-01-01T${time}`);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    }
+  }
+  return time;
+}
+
+type UiEvent = {
+  slug: string;
+  title: string;
+  dateLabel: string;
+  time: string;
+  location: string;
+  runType: string;
+};
+
+function toUiEvent(e: EventRow): UiEvent {
+  return {
+    slug: e.id,
+    title: e.title ?? "Untitled",
+    dateLabel: formatEventDateLabel(e.event_date),
+    time: formatEventTime(e.event_time),
+    location: e.location_name ?? "TBD",
+    runType: "Run",
+  };
+}
+
+export default async function ClubEventsPage({
+  params,
+}: {
+  params: Promise<{ site: string }>;
+}) {
+  const { site } = await params
+  const club = await getClubBySubdomain(site);
+  if (!club) notFound();
+
+  const events = (await getUpcomingEventsByClubId(club.id, 50)).map(toUiEvent);
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

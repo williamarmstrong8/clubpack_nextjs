@@ -1,71 +1,46 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin } from "lucide-react";
 
-const events = [
-  {
-    slug: "sunrise-social-5k",
-    title: "Sunrise Social 5K",
-    dateLabel: "Tue, Feb 11",
-    time: "6:30 AM",
-    location: "Lady Bird Lake Trail",
-    runType: "5K",
-    notes:
-      "Easy conversational pace. We’ll split into groups and regroup at mile markers.",
-  },
-  {
-    slug: "hills-for-breakfast",
-    title: "Hills for Breakfast",
-    dateLabel: "Wed, Feb 12",
-    time: "6:15 AM",
-    location: "Austin High Steps",
-    runType: "Workout",
-    notes: "Warmup jog, then 6–8 hill reps. Cooldown and stretch after.",
-  },
-  {
-    slug: "tempo-and-treats",
-    title: "Tempo + Treats",
-    dateLabel: "Thu, Feb 13",
-    time: "6:15 PM",
-    location: "Zilker Park",
-    runType: "Tempo",
-    notes: "Optional tempo segments. Stay for snacks after.",
-  },
-  {
-    slug: "social-shakeout",
-    title: "Social Shakeout",
-    dateLabel: "Fri, Feb 14",
-    time: "7:00 AM",
-    location: "South Congress",
-    runType: "Easy",
-    notes: "A short easy run to start the day right.",
-  },
-  {
-    slug: "weekend-long-run",
-    title: "Weekend Long Run",
-    dateLabel: "Sat, Feb 15",
-    time: "8:00 AM",
-    location: "Mueller Lake Park",
-    runType: "Long Run",
-    notes: "Choose 6–12 miles. Multiple pace groups available.",
-  },
-  {
-    slug: "coffee-mile",
-    title: "Coffee Mile",
-    dateLabel: "Sun, Feb 16",
-    time: "9:00 AM",
-    location: "Downtown Austin",
-    runType: "Fun Run",
-    notes: "A short loop to your favorite coffee spot.",
-  },
-] as const;
+import { getClubBySubdomain, getEventById } from "@/lib/data/club-site";
 
-export default function EventPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
-  const event = events.find((e) => e.slug === slug);
+function formatEventDateLabel(isoDate: string | null) {
+  if (!isoDate) return "TBD";
+  const d = new Date(`${isoDate}T00:00:00`);
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatEventTime(t: string | null) {
+  const time = (t ?? "").trim();
+  if (!time) return "TBD";
+  if (/[ap]m$/i.test(time)) return time;
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
+    const date = new Date(`1970-01-01T${time}`);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    }
+  }
+  return time;
+}
+
+export default async function EventPage({
+  params,
+}: {
+  params: Promise<{ site: string; slug: string }>;
+}) {
+  const { site, slug } = await params;
+  const club = await getClubBySubdomain(site);
+  if (!club) notFound();
+
+  const event = await getEventById(club.id, slug);
 
   if (!event) {
     return (
@@ -86,21 +61,21 @@ export default function EventPage({ params }: { params: { slug: string } }) {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{event.dateLabel}</Badge>
-            <Badge>{event.runType}</Badge>
+            <Badge variant="secondary">{formatEventDateLabel(event.event_date)}</Badge>
+            <Badge>Run</Badge>
           </div>
           <h1 className="text-balance text-3xl font-semibold tracking-tight">
-            {event.title}
+            {event.title ?? "Untitled"}
           </h1>
           <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center">
             <span className="inline-flex items-center gap-2">
               <Clock className="size-4" />
-              {event.time}
+              {formatEventTime(event.event_time)}
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="inline-flex items-center gap-2">
               <MapPin className="size-4" />
-              {event.location}
+              {event.location_name ?? "TBD"}
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="inline-flex items-center gap-2">
@@ -124,7 +99,7 @@ export default function EventPage({ params }: { params: { slug: string } }) {
             <CardTitle className="text-base">Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>{event.notes}</p>
+            <p>{event.description ?? "Details coming soon."}</p>
             <p>
               Bring water, wear reflective gear if it&apos;s dark, and introduce
               yourself to the group leader when you arrive.

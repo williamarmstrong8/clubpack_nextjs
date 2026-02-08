@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,16 @@ function initialsFromName(name: string) {
   return (parts[0]?.[0] ?? "C") + (parts[1]?.[0] ?? "P");
 }
 
-export function ClubNavbar() {
+export function ClubNavbar({
+  site,
+  clubName: clubNameProp,
+}: {
+  site: string;
+  clubName?: string | null;
+}) {
   const pathname = usePathname();
-  const params = useParams<{ site?: string }>();
-  const site = params?.site ?? "club";
-  const clubName = titleCaseFromSlug(site);
+  const clubName =
+    (clubNameProp ?? "").trim() || titleCaseFromSlug(site ?? "club");
   const initials = initialsFromName(clubName);
 
   const navItems: NavItem[] = useMemo(
