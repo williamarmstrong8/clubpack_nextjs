@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 export const metadata = {
   title: "Features",
@@ -238,61 +237,6 @@ export default function FeaturesPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0YxRjVGOSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+')] opacity-50" />
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-blue-50/50 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-[1440px] mx-auto px-8 sm:px-12 lg:px-16 w-full relative z-10">
-          <div className="text-left mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 mb-4">
-              Coming Soon
-            </h2>
-            <p className="text-2xl text-gray-600">
-              We&apos;re actively building the next evolution of ClubPack, based
-              on your feedback.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {[
-              {
-                title: "Advanced Admin Roles",
-                description:
-                  "Granular permissions and multi-admin workflows for growing clubs.",
-                eta: "Q4 2025",
-              },
-              {
-                title: "Paid Event Support",
-                description:
-                  "Accept payments, track who paid, and simplify finances with Stripe.",
-                eta: "Q4 2025",
-              },
-              {
-                title: "Branded Mobile App",
-                description:
-                  "Your club's mobile experience, customized and ready for the app store.",
-                eta: "Q1 2026",
-              },
-            ].map((item) => (
-              <Card
-                key={item.title}
-                className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-shadow duration-300 gap-0"
-              >
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  {item.title}
-                </h3>
-                <p className="text-gray-600 text-base mb-6 leading-relaxed">
-                  {item.description}
-                </p>
-                <div className="text-sm font-bold text-[#0054f9]">
-                  Expected: {item.eta}
-                </div>
-              </Card>
-            ))}
           </div>
         </div>
       </section>

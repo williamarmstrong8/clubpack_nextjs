@@ -132,10 +132,6 @@ export default function Navbar() {
               <Link href="/pricing" className={navLinkClass("/pricing")}>
                 Pricing
               </Link>
-
-              <Link href="/sponsors" className={navLinkClass("/sponsors")}>
-                For Sponsors
-              </Link>
             </div>
 
             <div className="hidden md:flex items-center gap-4">
