@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,30 +58,56 @@ export default async function EventPage({
     );
   }
 
+  const eventImageUrl = 
+    (typeof event.image_url === "string" && event.image_url) ||
+    (typeof event.event_image === "string" && event.event_image) ||
+    "/club-photos/happy-group.webp";
+
+  // Mock RSVPs - in production, fetch from database
+  const mockRsvps = [
+    { id: "1", name: "John Doe", avatar: null },
+    { id: "2", name: "Jane Smith", avatar: null },
+    { id: "3", name: "Mike Johnson", avatar: null },
+    { id: "4", name: "Sarah Williams", avatar: null },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
+    <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-10 sm:px-6 lg:px-8">
+      {/* Hero Image Card at Top */}
+      <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl">
+        <Image
+          src={eventImageUrl}
+          alt={event.title ?? "Event image"}
+          fill
+          className="object-cover"
+          sizes="(max-width: 1400px) 100vw, 1400px"
+          priority
+        />
+      </div>
+
+      {/* Title and Metadata */}
+      <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 space-y-3">
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{formatEventDateLabel(event.event_date)}</Badge>
             <Badge>Run</Badge>
           </div>
-          <h1 className="text-balance text-3xl font-semibold tracking-tight">
+          <h1 className="text-balance text-4xl font-bold tracking-tight">
             {event.title ?? "Untitled"}
           </h1>
-          <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col gap-2 text-base text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center">
             <span className="inline-flex items-center gap-2">
-              <Clock className="size-4" />
+              <Clock className="size-5" />
               {formatEventTime(event.event_time)}
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="inline-flex items-center gap-2">
-              <MapPin className="size-4" />
+              <MapPin className="size-5" />
               {event.location_name ?? "TBD"}
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="inline-flex items-center gap-2">
-              <Calendar className="size-4" />
+              <Calendar className="size-5" />
               Weekly club event
             </span>
           </div>
@@ -89,11 +117,11 @@ export default async function EventPage({
           <Button asChild variant="outline">
             <Link href="../">Back to events</Link>
           </Button>
-          <Button>Join / RSVP</Button>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+      {/* Content Grid */}
+      <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Details</CardTitle>
@@ -107,23 +135,39 @@ export default async function EventPage({
           </CardContent>
         </Card>
 
-        <Card>
+        {/* RSVP Card */}
+        <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Meeting info</CardTitle>
+            <CardTitle className="text-base">RSVPs</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div>
-              <div className="font-medium text-foreground">Meet point</div>
-              <div>Main entrance / parking lot</div>
+          <CardContent className="space-y-4">
+            <div className="flex items-center">
+              <div className="flex -space-x-2">
+                {mockRsvps.slice(0, 4).map((rsvp, index) => (
+                  <Avatar
+                    key={rsvp.id}
+                    className="size-10 border-2 border-background"
+                    style={{ zIndex: mockRsvps.length - index }}
+                  >
+                    <AvatarImage src={rsvp.avatar || undefined} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                      {rsvp.name.split(" ").map((n) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              <span className="ml-3 text-sm text-muted-foreground">
+                {mockRsvps.length} {mockRsvps.length === 1 ? "person" : "people"} going
+              </span>
             </div>
-            <div>
-              <div className="font-medium text-foreground">Arrive</div>
-              <div>10 minutes early</div>
-            </div>
-            <div>
-              <div className="font-medium text-foreground">Pace</div>
-              <div>Groups + regrouping</div>
-            </div>
+            
+            <Button className="w-full bg-primary hover:bg-primary/90" size="lg">
+              RSVP for this event
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              RSVP helps us plan. You can always show up!
+            </p>
           </CardContent>
         </Card>
       </div>

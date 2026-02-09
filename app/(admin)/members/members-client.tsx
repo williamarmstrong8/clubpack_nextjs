@@ -1,21 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Copy, Search, UserPlus } from "lucide-react"
+import { Search, UserPlus } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -25,12 +16,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { InviteMembersDialog } from "@/app/(admin)/components/invite-members-dialog"
+
 export type MemberRow = {
   id: string
   name: string | null
   email: string | null
   joined_at: string | null
   status: string | null
+  role?: string | null
+  avatar_url?: string | null
 }
 
 function initials(name: string) {
@@ -44,12 +39,16 @@ function initials(name: string) {
 
 export function MembersClient({
   members,
+  inviteUrl,
+  newMembersThisMonth,
+  adminCount,
 }: {
   members: MemberRow[]
+  inviteUrl: string
+  newMembersThisMonth: number
+  adminCount: number
 }) {
   const [query, setQuery] = React.useState("")
-  const [inviteOpen, setInviteOpen] = React.useState(false)
-  const inviteLink = "https://example.joinclubpack.com/invite/club-123"
 
   const filtered = members.filter((m) => {
     const name = (m.name ?? "").toLowerCase()
@@ -71,41 +70,16 @@ export function MembersClient({
           </p>
         </div>
 
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-          <DialogTrigger asChild>
+        <InviteMembersDialog
+          inviteUrl={inviteUrl}
+          title="Invite member"
+          trigger={
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
               Invite member
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite members</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-3">
-              <div className="text-sm text-muted-foreground">
-                Share this link with new members.
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="inviteLink">Invite link</Label>
-                <Input id="inviteLink" readOnly value={inviteLink} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteOpen(false)}>
-                Close
-              </Button>
-              <Button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(inviteLink)
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy link
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,6 +91,26 @@ export function MembersClient({
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-semibold">{total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">
+              New members this month
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold">{newMembersThisMonth}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">
+              Admin count
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold">{adminCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -157,6 +151,9 @@ export function MembersClient({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-9 w-9">
+                          {m.avatar_url ? (
+                            <AvatarImage src={m.avatar_url} alt={m.name ?? "Member"} />
+                          ) : null}
                           <AvatarFallback className="text-xs">
                             {initials(m.name ?? "Member")}
                           </AvatarFallback>

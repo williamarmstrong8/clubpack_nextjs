@@ -12,6 +12,7 @@ export type ClubEvent = {
   time: string;
   location: string;
   runType: string;
+  imageUrl?: string;
 };
 
 export const clubData: ClubData = {

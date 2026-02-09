@@ -1,10 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { format } from "date-fns"
 import { CalendarPlus, MapPin, Users } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -12,10 +14,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -28,7 +37,9 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
-import { createEvent, updateEvent } from "./actions"
+import { cn } from "@/lib/utils"
+import { updateEvent } from "./actions"
+import { CreateEventDialog } from "./create-event-dialog"
 
 export type EventRow = {
   id: string
@@ -36,18 +47,84 @@ export type EventRow = {
   description?: string | null
   event_date: string | null
   event_time: string | null
+  image_url?: string | null
   location_name?: string | null
   status?: string | null
   max_attendees?: number | null
   rsvpCount: number
 }
 
+function safeDateOnly(input: string) {
+  // Accept both "YYYY-MM-DD" and full timestamps like "YYYY-MM-DDTHH:mm:ssZ"
+  const m = input.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (m?.[1]) return new Date(`${m[1]}T00:00:00`)
+  const d = new Date(input)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 function formatDate(isoDate: string) {
-  return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
+  const d = safeDateOnly(isoDate)
+  if (!d) return isoDate
+  return format(d, "MMM d, yyyy")
+}
+
+function isoFromDate(d: Date) {
+  return format(d, "yyyy-MM-dd")
+}
+
+function dateFromIso(iso: string) {
+  if (!iso) return undefined
+  const [y, m, d] = iso.split("-").map((p) => Number(p))
+  if (!y || !m || !d) return undefined
+  return new Date(y, m - 1, d)
+}
+
+function timeOptions(stepMinutes = 15) {
+  const times: Array<{ value: string; label: string }> = []
+  for (let mins = 0; mins < 24 * 60; mins += stepMinutes) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+    const label = format(new Date(2000, 0, 1, h, m), "h:mm a")
+    times.push({ value, label })
+  }
+  return times
+}
+
+function parseTimeParts(input: string) {
+  // Handles "HH:mm", "HH:mm:ss", and "HH:mm:ss+00" safely
+  const m = input.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/)
+  if (!m) return null
+  const hh = Number(m[1])
+  const mm = Number(m[2])
+  const ss = m[3] ? Number(m[3]) : 0
+  if ([hh, mm, ss].some((n) => Number.isNaN(n))) return null
+  return { hh, mm, ss }
+}
+
+function normalizeTimeForSelect(input: string) {
+  const p = parseTimeParts(input)
+  if (!p) return input
+  return `${String(p.hh).padStart(2, "0")}:${String(p.mm).padStart(2, "0")}`
+}
+
+function formatTimeLabel(time: string) {
+  const p = parseTimeParts(time)
+  if (!p) return time
+  const d = new Date(2000, 0, 1, p.hh, p.mm, p.ss)
+  if (Number.isNaN(d.getTime())) return time
+  return format(d, "h:mm a")
+}
+
+function eventDateTime(e: Pick<EventRow, "event_date" | "event_time">) {
+  if (!e.event_date) return null
+  const dt = safeDateOnly(e.event_date)
+  if (!dt) return null
+  if (e.event_time) {
+    const p = parseTimeParts(e.event_time)
+    if (p) dt.setHours(p.hh, p.mm, 0, 0)
+  }
+  return dt
 }
 
 function badgeForEvent(e: EventRow) {
@@ -66,21 +143,12 @@ function badgeForEvent(e: EventRow) {
 
 export function EventsClient({ events }: { events: EventRow[] }) {
   const [tab, setTab] = React.useState<"upcoming" | "past">("upcoming")
-  const [createOpen, setCreateOpen] = React.useState(false)
+  const [viewOpen, setViewOpen] = React.useState(false)
+  const [viewing, setViewing] = React.useState<EventRow | null>(null)
   const [editOpen, setEditOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<EventRow | null>(null)
 
   const [isPending, startTransition] = React.useTransition()
-
-  const [createForm, setCreateForm] = React.useState({
-    title: "",
-    event_date: "",
-    event_time: "",
-    location_name: "",
-    description: "",
-    hasCapacity: true,
-    max_attendees: 50,
-  })
 
   const [editForm, setEditForm] = React.useState({
     title: "",
@@ -93,16 +161,37 @@ export function EventsClient({ events }: { events: EventRow[] }) {
     max_attendees: 50,
   })
 
+  const [editCoverFile, setEditCoverFile] = React.useState<File | null>(null)
+  const [editCoverPreview, setEditCoverPreview] = React.useState<string | null>(
+    null,
+  )
+
+  React.useEffect(() => {
+    return () => {
+      if (editCoverPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(editCoverPreview)
+      }
+    }
+  }, [editCoverPreview])
+
   const today = new Date()
+  const startOfToday = new Date(today.toDateString())
+
   const filtered = events
     .slice()
-    .sort((a, b) => (a.event_date ?? "").localeCompare(b.event_date ?? ""))
     .filter((e) => {
-      if (!e.event_date) return tab === "upcoming"
-      const d = new Date(`${e.event_date}T00:00:00`)
-      const isPast = d < new Date(today.toDateString())
+      const dt = eventDateTime(e)
+      if (!dt) return tab === "upcoming"
+      const isPast = dt < startOfToday
       return tab === "upcoming" ? !isPast : isPast
     })
+    .sort((a, b) => {
+      const ad = eventDateTime(a)?.getTime() ?? 0
+      const bd = eventDateTime(b)?.getTime() ?? 0
+      return tab === "upcoming" ? ad - bd : bd - ad
+    })
+
+  const times = React.useMemo(() => timeOptions(15), [])
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -114,154 +203,14 @@ export function EventsClient({ events }: { events: EventRow[] }) {
           </p>
         </div>
 
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
+        <CreateEventDialog
+          trigger={
             <Button>
               <CalendarPlus className="mr-2 h-4 w-4" />
               Create event
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create event</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="create-title">Title</Label>
-                <Input
-                  id="create-title"
-                  value={createForm.title}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({ ...f, title: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="create-date">Date</Label>
-                  <Input
-                    id="create-date"
-                    type="date"
-                    value={createForm.event_date}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({ ...f, event_date: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="create-time">Time</Label>
-                  <Input
-                    id="create-time"
-                    type="time"
-                    value={createForm.event_time}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({ ...f, event_time: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="create-location">Location</Label>
-                <Input
-                  id="create-location"
-                  value={createForm.location_name}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({
-                      ...f,
-                      location_name: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="create-description">Description</Label>
-                <Textarea
-                  id="create-description"
-                  rows={4}
-                  value={createForm.description}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({ ...f, description: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Limit capacity</div>
-                  <div className="text-xs text-muted-foreground">
-                    Cap RSVP count for this event.
-                  </div>
-                </div>
-                <Switch
-                  checked={createForm.hasCapacity}
-                  onCheckedChange={(checked) =>
-                    setCreateForm((f) => ({ ...f, hasCapacity: checked }))
-                  }
-                />
-              </div>
-
-              {createForm.hasCapacity ? (
-                <div className="grid gap-2">
-                  <Label htmlFor="create-capacity">Capacity</Label>
-                  <Input
-                    id="create-capacity"
-                    type="number"
-                    min={1}
-                    value={createForm.max_attendees}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({
-                        ...f,
-                        max_attendees: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-              ) : null}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                disabled={
-                  isPending ||
-                  !createForm.title.trim() ||
-                  !createForm.event_date ||
-                  !createForm.event_time
-                }
-                onClick={() => {
-                  startTransition(async () => {
-                    await createEvent({
-                      title: createForm.title.trim(),
-                      event_date: createForm.event_date,
-                      event_time: createForm.event_time,
-                      location_name: createForm.location_name.trim(),
-                      description: createForm.description.trim(),
-                      max_attendees: createForm.hasCapacity
-                        ? createForm.max_attendees
-                        : null,
-                    })
-                    setCreateForm({
-                      title: "",
-                      event_date: "",
-                      event_time: "",
-                      location_name: "",
-                      description: "",
-                      hasCapacity: true,
-                      max_attendees: 50,
-                    })
-                    setCreateOpen(false)
-                  })
-                }}
-              >
-                {isPending ? "Creating..." : "Create"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
 
       <Card>
@@ -301,24 +250,14 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                     key={e.id}
                     className="cursor-pointer"
                     onClick={() => {
-                      setEditing(e)
-                      setEditForm({
-                        title: e.title ?? "",
-                        event_date: e.event_date ?? "",
-                        event_time: e.event_time ?? "",
-                        location_name: e.location_name ?? "",
-                        description: e.description ?? "",
-                        status: e.status ?? "active",
-                        hasCapacity: typeof e.max_attendees === "number",
-                        max_attendees: e.max_attendees ?? 50,
-                      })
-                      setEditOpen(true)
+                      setViewing(e)
+                      setViewOpen(true)
                     }}
                   >
                     <TableCell className="font-medium">{e.title ?? "Untitled"}</TableCell>
                     <TableCell>
                       {e.event_date ? formatDate(e.event_date) : "—"}
-                      {e.event_time ? ` • ${e.event_time}` : ""}
+                      {e.event_time ? ` • ${formatTimeLabel(e.event_time)}` : ""}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="inline-flex items-center gap-2">
@@ -351,6 +290,102 @@ export function EventsClient({ events }: { events: EventRow[] }) {
         </CardContent>
       </Card>
 
+      <Dialog
+        open={viewOpen}
+        onOpenChange={(v) => {
+          setViewOpen(v)
+          if (!v) setViewing(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>{viewing?.title ?? "Event"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="border-muted-foreground/25 bg-muted/15 aspect-video overflow-hidden rounded-lg border">
+              {viewing?.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={viewing.image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No cover image
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                <span>
+                  {viewing?.event_date ? formatDate(viewing.event_date) : "—"}
+                  {viewing?.event_time
+                    ? ` • ${formatTimeLabel(viewing.event_time)}`
+                    : ""}
+                </span>
+                {viewing?.location_name ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="opacity-60">•</span>
+                    <MapPin className="h-4 w-4" />
+                    <span>{viewing.location_name}</span>
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {viewing?.rsvpCount ?? 0}
+                  {typeof viewing?.max_attendees === "number"
+                    ? `/${viewing.max_attendees}`
+                    : ""}{" "}
+                  attending
+                </span>
+              </div>
+            </div>
+
+            {viewing?.description ? (
+              <div className="text-sm leading-relaxed">{viewing.description}</div>
+            ) : (
+              <div className="text-sm text-muted-foreground">No description.</div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewOpen(false)}>
+              Close
+            </Button>
+            <Button
+              disabled={!viewing}
+              onClick={() => {
+                if (!viewing) return
+                setEditing(viewing)
+                setEditForm({
+                  title: viewing.title ?? "",
+                  event_date: viewing.event_date ?? "",
+                  event_time: viewing.event_time
+                    ? normalizeTimeForSelect(viewing.event_time)
+                    : "",
+                  location_name: viewing.location_name ?? "",
+                  description: viewing.description ?? "",
+                  status: viewing.status ?? "active",
+                  hasCapacity: typeof viewing.max_attendees === "number",
+                  max_attendees: viewing.max_attendees ?? 50,
+                })
+                setEditCoverFile(null)
+                setEditCoverPreview(viewing.image_url ?? null)
+                setViewOpen(false)
+                setEditOpen(true)
+              }}
+            >
+              Edit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -369,26 +404,98 @@ export function EventsClient({ events }: { events: EventRow[] }) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="edit-date">Date</Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={editForm.event_date}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, event_date: e.target.value }))
-                  }
-                />
+                <Label>Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !editForm.event_date && "text-muted-foreground",
+                      )}
+                    >
+                      {editForm.event_date
+                        ? formatDate(editForm.event_date)
+                        : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFromIso(editForm.event_date)}
+                      onSelect={(d) => {
+                        if (!d) return
+                        setEditForm((f) => ({ ...f, event_date: isoFromDate(d) }))
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-time">Time</Label>
-                <Input
-                  id="edit-time"
-                  type="time"
+                <Label>Time</Label>
+                <Select
                   value={editForm.event_time}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, event_time: e.target.value }))
+                  onValueChange={(v) =>
+                    setEditForm((f) => ({ ...f, event_time: v }))
                   }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[320px]">
+                    {times.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Event image (16:9)</Label>
+              <div className="relative">
+                <input
+                  id="edit-cover"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null
+                    if (!file) return
+                    if (editCoverPreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(editCoverPreview)
+                    }
+                    setEditCoverFile(file)
+                    setEditCoverPreview(URL.createObjectURL(file))
+                  }}
                 />
+                <button
+                  type="button"
+                  className={cn(
+                    "border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 aspect-video w-full overflow-hidden rounded-lg border-2 border-dashed transition-colors",
+                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden",
+                  )}
+                  onClick={() =>
+                    document.getElementById("edit-cover")?.click()
+                  }
+                >
+                  {editCoverPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={editCoverPreview}
+                      alt="Event cover preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                      Upload cover image (16:9)
+                    </div>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -464,18 +571,29 @@ export function EventsClient({ events }: { events: EventRow[] }) {
               onClick={() => {
                 if (!editing) return
                 startTransition(async () => {
-                  await updateEvent({
-                    id: editing.id,
-                    title: editForm.title.trim(),
-                    event_date: editForm.event_date,
-                    event_time: editForm.event_time,
-                    location_name: editForm.location_name.trim(),
-                    description: editForm.description.trim(),
-                    max_attendees: editForm.hasCapacity ? editForm.max_attendees : null,
-                    status: editForm.status,
-                  })
+                  const fd = new FormData()
+                  fd.set("id", editing.id)
+                  fd.set("title", editForm.title.trim())
+                  fd.set("event_date", editForm.event_date)
+                  fd.set("event_time", editForm.event_time)
+                  fd.set("location_name", editForm.location_name.trim())
+                  fd.set("description", editForm.description.trim())
+                  fd.set("status", editForm.status)
+                  fd.set(
+                    "max_attendees",
+                    editForm.hasCapacity ? String(editForm.max_attendees) : "",
+                  )
+                  if (editCoverFile) fd.set("cover_image", editCoverFile)
+
+                  await updateEvent(fd)
+
                   setEditOpen(false)
                   setEditing(null)
+                  setEditCoverFile(null)
+                  if (editCoverPreview?.startsWith("blob:")) {
+                    URL.revokeObjectURL(editCoverPreview)
+                  }
+                  setEditCoverPreview(null)
                 })
               }}
             >

@@ -1,19 +1,7 @@
-import { ArrowUpRight, CalendarPlus, UserPlus } from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-
 import { getAdminContext } from "@/lib/admin/get-admin-context"
 import { createClient } from "@/lib/supabase/server"
+
+import { HomeClient } from "./home-client"
 
 export const dynamic = "force-dynamic"
 
@@ -77,6 +65,7 @@ export default async function HomePage() {
     rsvpsThisWeekRes,
     rsvpsPrevWeekRes,
     activityRes,
+    clubRes,
   ] = await Promise.all([
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("club_id", clubId),
     supabase
@@ -112,6 +101,7 @@ export default async function HomePage() {
       .eq("club_id", clubId)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase.from("clubs").select("subdomain").eq("id", clubId).maybeSingle(),
   ])
 
   const membersTotal = membersTotalRes.count ?? 0
@@ -132,101 +122,16 @@ export default async function HomePage() {
     time: formatTimeAgo(a.created_at),
   }))
 
+  const subdomain = (clubRes.data as { subdomain?: string | null } | null)?.subdomain ?? ""
+  const inviteUrl = subdomain
+    ? `https://${subdomain}.joinclubpack.com/signup`
+    : "https://joinclubpack.com/signup"
+
   const stats = [
     { title: "Total members", value: String(membersTotal), delta: membersDelta >= 0 ? `+${membersDelta}` : String(membersDelta) },
     { title: "Upcoming events", value: String(upcomingEvents), delta: "—" },
     { title: "RSVPs this week", value: String(rsvpsThisWeek), delta: rsvpsDelta >= 0 ? `+${rsvpsDelta}` : String(rsvpsDelta) },
   ]
 
-  return (
-    <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
-        <p className="text-sm text-muted-foreground">
-          Here’s what’s happening with your club.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <Badge variant="secondary">{stat.delta}</Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-semibold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Quick actions</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2">
-            <Button className="justify-between">
-              <span className="flex items-center gap-2">
-                <CalendarPlus className="h-4 w-4" />
-                Create event
-              </span>
-              <ArrowUpRight className="h-4 w-4 opacity-60" />
-            </Button>
-            <Button variant="outline" className="justify-between">
-              <span className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Invite members
-              </span>
-              <ArrowUpRight className="h-4 w-4 opacity-60" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Recent activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Activity</TableHead>
-                    <TableHead className="hidden md:table-cell">Detail</TableHead>
-                    <TableHead className="w-[120px] text-right">When</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentActivity.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.title}</TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">
-                        {row.detail || "—"}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {row.time}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {recentActivity.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-10 text-center">
-                        <div className="text-sm text-muted-foreground">
-                          No recent activity yet.
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
+  return <HomeClient stats={stats} recentActivity={recentActivity} inviteUrl={inviteUrl} />
 }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -44,9 +45,15 @@ type UiEvent = {
   time: string;
   location: string;
   runType: string;
+  imageUrl: string;
 };
 
 function toUiEvent(e: EventRow): UiEvent {
+  const imageUrl = 
+    (typeof e.image_url === "string" && e.image_url) ||
+    (typeof e.event_image === "string" && e.event_image) ||
+    null;
+    
   return {
     slug: e.id,
     title: e.title ?? "Untitled",
@@ -54,6 +61,7 @@ function toUiEvent(e: EventRow): UiEvent {
     time: formatEventTime(e.event_time),
     location: e.location_name ?? "TBD",
     runType: "Run",
+    imageUrl: imageUrl || "/club-photos/happy-group.webp",
   };
 }
 
@@ -69,7 +77,7 @@ export default async function ClubEventsPage({
   const events = (await getUpcomingEventsByClubId(club.id, 50)).map(toUiEvent);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
+    <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-16 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -84,14 +92,25 @@ export default async function ClubEventsPage({
         </div>
 
         <Button asChild variant="outline">
-          <Link href="../#join">Join club</Link>
+          <Link href="../signup">Join club</Link>
         </Button>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
-          <Card key={event.slug} className="h-full">
-            <CardHeader className="space-y-2">
+          <Card key={event.slug} className="h-full overflow-hidden p-0">
+            <Link href={`./events/${event.slug}`} className="block">
+              <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                <Image
+                  src={event.imageUrl}
+                  alt={event.title}
+                  fill
+                  className="object-cover transition-transform hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </div>
+            </Link>
+            <CardHeader className="space-y-2 pb-3">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{event.dateLabel}</Badge>
                 <Badge>{event.runType}</Badge>
@@ -108,12 +127,12 @@ export default async function ClubEventsPage({
                 </span>
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-between">
+            <CardContent className="flex items-center justify-between pt-0">
               <div className="text-xs text-muted-foreground">
                 Bring water · Meet 10 min early
               </div>
               <Button asChild size="sm" variant="ghost">
-                <Link href={`./${event.slug}`}>Details</Link>
+                <Link href={`./events/${event.slug}`}>Details</Link>
               </Button>
             </CardContent>
           </Card>

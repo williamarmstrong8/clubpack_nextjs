@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
 /**
- * Route-group layout for club-site.
+ * Route-group layout for the club-site.
  *
- * IMPORTANT: Route-group layouts (like `(club-site)`) do NOT receive dynamic `params`.
- * The dynamic tenant layout lives at `app/(club-site)/[site]/layout.tsx`.
+ * IMPORTANT: Route-group layouts (like `app/(club-site)/layout.tsx`) do NOT
+ * reliably receive dynamic params from child segments in all Next versions.
+ * Tenant-aware logic lives in `app/(club-site)/[site]/layout.tsx`.
  */
 export default function ClubSiteLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>
+  return <>{children}</>;
 }
 

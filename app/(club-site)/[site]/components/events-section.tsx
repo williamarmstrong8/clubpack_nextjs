@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import type { ClubEvent } from "../mock-data";
 export function EventsSection({ events }: { events: ClubEvent[] }) {
   return (
     <section className="bg-muted/20">
-      <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -31,17 +32,30 @@ export function EventsSection({ events }: { events: ClubEvent[] }) {
           </Button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <Card key={event.title} className="h-full">
-              <CardHeader className="space-y-2">
+            <Card key={event.title} className="h-full overflow-hidden p-0">
+              {event.imageUrl && (
+                <Link href="./events" className="block">
+                  <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                    <Image
+                      src={event.imageUrl}
+                      alt={event.title}
+                      fill
+                      className="object-cover transition-transform hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  </div>
+                </Link>
+              )}
+              <CardHeader className="space-y-2 pb-3">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">{event.dateLabel}</Badge>
                   <Badge>{event.runType}</Badge>
                 </div>
                 <CardTitle className="text-base">{event.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-0">
                 <div className="space-y-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Clock className="size-4" />

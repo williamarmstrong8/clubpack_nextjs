@@ -1,5 +1,5 @@
 import { Separator } from "@/components/ui/separator";
-import { Instagram, Linkedin, Mail, Twitter } from "lucide-react";
+import { Instagram } from "lucide-react";
 
 function instagramUrl(handleOrUrl: string) {
   const v = handleOrUrl.trim();
@@ -25,12 +25,10 @@ export function ClubFooter({
     (club?.tagline ?? "").trim() ||
     "A clean, theme-ready website template for run clubs.";
   const ig = club?.instagram ? instagramUrl(String(club.instagram)) : "";
-  const email =
-    (club?.contact_email ?? club?.email ?? "hello@clubpack.dev").toString();
 
   return (
     <footer className="border-t bg-background">
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <div className="text-sm font-semibold">{clubName}</div>
@@ -39,36 +37,19 @@ export function ClubFooter({
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-sm">
-            <a
-              href={ig || "#"}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="Instagram"
-            >
-              <Instagram className="size-5" />
-            </a>
-            <a
-              href="#"
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="X"
-            >
-              <Twitter className="size-5" />
-            </a>
-            <a
-              href="#"
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="size-5" />
-            </a>
-            <a
-              href={`mailto:${email}`}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="Email"
-            >
-              <Mail className="size-5" />
-            </a>
-          </div>
+          {ig && (
+            <div className="flex items-center gap-4 text-sm">
+              <a
+                href={ig}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Instagram"
+              >
+                <Instagram className="size-5" />
+              </a>
+            </div>
+          )}
         </div>
 
         <Separator className="my-8" />

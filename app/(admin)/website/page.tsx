@@ -10,6 +10,10 @@ type ClubRow = {
   hero_subtext: string | null
   tagline: string | null
   instagram: string | null
+  primary_color?: string | null
+  logo_url?: string | null
+  hero_image_url?: string | null
+  about_blurb?: string | null
 }
 
 export default async function WebsitePage() {
@@ -30,7 +34,9 @@ export default async function WebsitePage() {
   const [clubRes, settingsRes, faqsRes] = await Promise.all([
     supabase
       .from("clubs")
-      .select("subdomain, hero_headline, hero_subtext, tagline, instagram")
+      .select(
+        "subdomain, hero_headline, hero_subtext, tagline, instagram, primary_color, logo_url, hero_image_url, about_blurb",
+      )
       .eq("id", profile.club_id)
       .single(),
     supabase

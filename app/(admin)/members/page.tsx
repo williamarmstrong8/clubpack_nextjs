@@ -17,11 +17,33 @@ export default async function MembersPage() {
   }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("memberships")
-    .select("id, name, email, joined_at, status")
-    .eq("club_id", profile.club_id)
-    .order("joined_at", { ascending: false })
+  const firstOfMonthIso = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  ).toISOString()
+
+  const [membersRes, newThisMonthRes, clubRes, adminCountRes] =
+    await Promise.all([
+      supabase
+        .from("memberships")
+        .select("id, name, email, joined_at, status, avatar_url")
+        .eq("club_id", profile.club_id)
+        .order("joined_at", { ascending: false }),
+      supabase
+        .from("memberships")
+        .select("id", { count: "exact", head: true })
+        .eq("club_id", profile.club_id)
+        .gte("joined_at", firstOfMonthIso),
+      supabase.from("clubs").select("subdomain").eq("id", profile.club_id).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("club_id", profile.club_id)
+        .eq("role", "admin"),
+    ])
+
+  const { data, error } = membersRes
 
   if (error) {
     return (
@@ -33,5 +55,17 @@ export default async function MembersPage() {
   }
 
   const members = (data ?? []) as MemberRow[]
-  return <MembersClient members={members} />
+  const subdomain = (clubRes.data as { subdomain?: string | null } | null)?.subdomain ?? ""
+  const inviteUrl = subdomain
+    ? `https://${subdomain}.joinclubpack.com/signup`
+    : "https://joinclubpack.com/signup"
+
+  return (
+    <MembersClient
+      members={members}
+      inviteUrl={inviteUrl}
+      newMembersThisMonth={newThisMonthRes.count ?? 0}
+      adminCount={adminCountRes.count ?? 0}
+    />
+  )
 }

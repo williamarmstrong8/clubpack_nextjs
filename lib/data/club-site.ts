@@ -1,5 +1,4 @@
 import { cache } from "react"
-import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 
@@ -17,6 +16,7 @@ export type ClubRow = {
   hero_headline?: string | null
   hero_subtext?: string | null
   instagram?: string | null
+  primary_color?: string | null
   // Allow additional columns without failing type-check.
   [key: string]: unknown
 }
@@ -33,27 +33,15 @@ export type EventRow = {
   [key: string]: unknown
 }
 
-let serviceClient: SupabaseClient | null = null
-function getServiceClient(): SupabaseClient | null {
-  if (serviceClient) return serviceClient
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_SECRET_KEY
-
-  if (!url || !key) return null
-
-  serviceClient = createSupabaseJsClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  })
-
-  return serviceClient
+/** FAQ row from `faqs` table (same schema as clubpack_code website template). */
+export type FaqRow = {
+  id: string
+  club_id: string | null
+  question: string | null
+  answer: string | null
+  order_index?: number | null
+  created_at?: string | null
+  [key: string]: unknown
 }
 
 /**
@@ -67,35 +55,21 @@ export const getClubBySubdomain = cache(async (subdomain: string): Promise<ClubR
   const supabase = await createClient()
   const s = (subdomain ?? "").trim()
   if (!s) return null
-  const sLower = s.toLowerCase()
 
-  // Guard: avoid treating asset paths / filenames as "subdomains"
-  // e.g. "/apple-touch-icon.png" matches `/:site` and passes "apple-touch-icon.png".
-  if (!/^[a-z0-9-]+$/.test(sLower)) return null
+  // 1) Exact match first (canonical behavior)
+  const exact = await supabase.from("clubs").select("*").eq("subdomain", s).maybeSingle()
+  if (exact.error) throw new Error(exact.error.message)
+  if (exact.data) return exact.data as ClubRow
 
-  const { data, error } = await supabase
-    .from("clubs")
-    .select("*")
-    .ilike("subdomain", sLower)
-    .maybeSingle()
-
-  if (error) throw new Error(error.message)
-  if (data) return (data as ClubRow) ?? null
-
-  // Fallback: if RLS blocks anon reads, allow server-side service role reads (optional).
-  const svc = getServiceClient()
-  if (!svc) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        `[ClubSite] No club found for subdomain "${sLower}". If the club exists, check RLS on "clubs" or set SUPABASE_SERVICE_ROLE_KEY for server-side reads.`,
-      )
-    }
-    return null
+  // 2) Fallback: tolerate dash/no-dash mismatches (e.g. "happy-mile" vs "happymile")
+  const normalized = s.toLowerCase().replace(/-/g, "")
+  if (normalized && normalized !== s) {
+    const alt = await supabase.from("clubs").select("*").eq("subdomain", normalized).maybeSingle()
+    if (alt.error) throw new Error(alt.error.message)
+    if (alt.data) return alt.data as ClubRow
   }
 
-  const svcRes = await svc.from("clubs").select("*").ilike("subdomain", sLower).maybeSingle()
-  if (svcRes.error) throw new Error(svcRes.error.message)
-  return (svcRes.data as ClubRow | null) ?? null
+  return null
 })
 
 export const getUpcomingEventsByClubId = cache(async (clubId: string, limit = 6): Promise<EventRow[]> => {
@@ -107,28 +81,14 @@ export const getUpcomingEventsByClubId = cache(async (clubId: string, limit = 6)
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, club_id, title, description, event_date, event_time, location_name, status")
+    .select("*")
     .eq("club_id", id)
     .gte("event_date", todayIso)
     .order("event_date", { ascending: true })
     .limit(limit)
 
   if (error) throw new Error(error.message)
-  if (data) return (data as EventRow[]) ?? []
-
-  const svc = getServiceClient()
-  if (!svc) return []
-
-  const svcRes = await svc
-    .from("events")
-    .select("id, club_id, title, description, event_date, event_time, location_name, status")
-    .eq("club_id", id)
-    .gte("event_date", todayIso)
-    .order("event_date", { ascending: true })
-    .limit(limit)
-
-  if (svcRes.error) throw new Error(svcRes.error.message)
-  return (svcRes.data as EventRow[]) ?? []
+  return (data as EventRow[]) ?? []
 })
 
 export const getEventById = cache(async (clubId: string, eventId: string): Promise<EventRow | null> => {
@@ -139,25 +99,31 @@ export const getEventById = cache(async (clubId: string, eventId: string): Promi
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, club_id, title, description, event_date, event_time, location_name, status")
+    .select("*")
     .eq("club_id", cId)
     .eq("id", eId)
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  if (data) return (data as EventRow) ?? null
+  return (data as EventRow | null) ?? null
+})
 
-  const svc = getServiceClient()
-  if (!svc) return null
+/**
+ * Fetch FAQs for a club from the `faqs` table (same as clubpack_code website template).
+ * Ordered by order_index ascending.
+ */
+export const getFaqsByClubId = cache(async (clubId: string): Promise<FaqRow[]> => {
+  const supabase = await createClient()
+  const id = (clubId ?? "").trim()
+  if (!id) return []
 
-  const svcRes = await svc
-    .from("events")
-    .select("id, club_id, title, description, event_date, event_time, location_name, status")
-    .eq("club_id", cId)
-    .eq("id", eId)
-    .maybeSingle()
+  const { data, error } = await supabase
+    .from("faqs")
+    .select("*")
+    .eq("club_id", id)
+    .order("order_index", { ascending: true })
 
-  if (svcRes.error) throw new Error(svcRes.error.message)
-  return (svcRes.data as EventRow | null) ?? null
+  if (error) throw new Error(error.message)
+  return (data as FaqRow[]) ?? []
 })
 

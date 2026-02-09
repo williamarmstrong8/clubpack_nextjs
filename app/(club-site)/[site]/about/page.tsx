@@ -30,7 +30,7 @@ export default async function AboutPage({
     "Join us for weekly community events.";
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">
+    <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-16 sm:px-6 lg:px-8">
       <div className="max-w-3xl space-y-4">
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">{location}</Badge>

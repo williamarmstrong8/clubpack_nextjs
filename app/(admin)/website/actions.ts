@@ -9,6 +9,8 @@ export async function updateClubWebsiteContent(input: {
   hero_subtext: string
   tagline: string
   instagram: string
+  primary_color?: string
+  about_blurb?: string
 }) {
   const { profile } = await getAdminContext()
   if (!profile.club_id) return
@@ -21,12 +23,93 @@ export async function updateClubWebsiteContent(input: {
       hero_subtext: input.hero_subtext,
       tagline: input.tagline,
       instagram: input.instagram,
+      primary_color: input.primary_color,
+      about_blurb: input.about_blurb,
     })
     .eq("id", profile.club_id)
 
   if (error) throw new Error(error.message)
 
   revalidatePath("/website")
+  revalidatePath("/settings/website")
+}
+
+function fileExt(name: string) {
+  const ext = name.split(".").pop()
+  if (!ext) return "png"
+  return ext.toLowerCase()
+}
+
+async function uploadClubAsset(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  clubId: string
+  folder: "logo" | "hero"
+  file: File
+}) {
+  const path = `${params.clubId}/${params.folder}/${params.folder}.${fileExt(params.file.name)}`
+  const uploadRes = await params.supabase.storage
+    .from("club-assets")
+    .upload(path, params.file, { upsert: true, contentType: params.file.type })
+
+  if (uploadRes.error) throw new Error(uploadRes.error.message)
+
+  const signed = await params.supabase.storage
+    .from("club-assets")
+    .createSignedUrl(path, 60 * 60 * 24 * 365)
+
+  if (signed.error || !signed.data?.signedUrl) {
+    throw new Error(signed.error?.message ?? "Failed to create signed URL.")
+  }
+
+  return signed.data.signedUrl
+}
+
+export async function uploadClubLogo(formData: FormData) {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) return
+
+  const supabase = await createClient()
+  const logo_url = await uploadClubAsset({
+    supabase,
+    clubId: profile.club_id,
+    folder: "logo",
+    file,
+  })
+
+  const { error } = await supabase
+    .from("clubs")
+    .update({ logo_url })
+    .eq("id", profile.club_id)
+
+  if (error) throw new Error(error.message)
+  revalidatePath("/website")
+  revalidatePath("/settings/website")
+}
+
+export async function uploadClubHeroImage(formData: FormData) {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) return
+
+  const supabase = await createClient()
+  const hero_image_url = await uploadClubAsset({
+    supabase,
+    clubId: profile.club_id,
+    folder: "hero",
+    file,
+  })
+
+  const { error } = await supabase
+    .from("clubs")
+    .update({ hero_image_url })
+    .eq("id", profile.club_id)
+
+  if (error) throw new Error(error.message)
+  revalidatePath("/website")
+  revalidatePath("/settings/website")
 }
 
 export async function updateClubSettings(input: {
@@ -56,6 +139,7 @@ export async function updateClubSettings(input: {
   if (error) throw new Error(error.message)
 
   revalidatePath("/website")
+  revalidatePath("/settings/website")
 }
 
 export async function createFaq(input: {
@@ -76,6 +160,7 @@ export async function createFaq(input: {
 
   if (error) throw new Error(error.message)
   revalidatePath("/website")
+  revalidatePath("/settings/website")
 }
 
 export async function updateFaq(input: {
@@ -100,6 +185,7 @@ export async function updateFaq(input: {
 
   if (error) throw new Error(error.message)
   revalidatePath("/website")
+  revalidatePath("/settings/website")
 }
 
 export async function deleteFaq(id: string) {
@@ -110,5 +196,6 @@ export async function deleteFaq(id: string) {
   const { error } = await supabase.from("faqs").delete().eq("id", id).eq("club_id", profile.club_id)
   if (error) throw new Error(error.message)
   revalidatePath("/website")
+  revalidatePath("/settings/website")
 }
 

@@ -8,6 +8,15 @@ const nextConfig: NextConfig = {
     root: appDir,
   },
   outputFileTracingRoot: appDir,
+  images: {
+    // Allow Supabase Storage signed/public URLs for club hero images.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+      },
+    ],
+  },
   // Pin resolution to this app so "tailwindcss" and other deps resolve from clubpack-nextjs/node_modules
   // when the toolchain runs with a parent workspace root (e.g. CLUBPACK WORKSPACE).
   webpack: (config) => {

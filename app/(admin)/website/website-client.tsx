@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, ImagePlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +23,8 @@ import {
   deleteFaq,
   updateClubSettings,
   updateClubWebsiteContent,
+  uploadClubHeroImage,
+  uploadClubLogo,
   updateFaq,
 } from "./actions"
 
@@ -32,6 +34,10 @@ export type ClubWebsiteContent = {
   hero_subtext: string | null
   tagline: string | null
   instagram: string | null
+  primary_color?: string | null
+  logo_url?: string | null
+  hero_image_url?: string | null
+  about_blurb?: string | null
 }
 
 export type ClubSettings = {
@@ -68,7 +74,25 @@ export function WebsiteClient({
     hero_subtext: initial.hero_subtext ?? "",
     tagline: initial.tagline ?? "",
     instagram: initial.instagram ?? "",
+    primary_color: initial.primary_color ?? "#0ea5e9",
+    about_blurb: initial.about_blurb ?? "",
   })
+
+  const [logoFile, setLogoFile] = React.useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = React.useState<string | null>(
+    initial.logo_url ?? null,
+  )
+  const [heroFile, setHeroFile] = React.useState<File | null>(null)
+  const [heroPreview, setHeroPreview] = React.useState<string | null>(
+    initial.hero_image_url ?? null,
+  )
+
+  React.useEffect(() => {
+    return () => {
+      if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview)
+      if (heroPreview?.startsWith("blob:")) URL.revokeObjectURL(heroPreview)
+    }
+  }, [logoPreview, heroPreview])
 
   const [newFaq, setNewFaq] = React.useState({
     question: "",
@@ -109,6 +133,73 @@ export function WebsiteClient({
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
+              <Label>Logo</Label>
+              <input
+                id="logoUpload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  if (!file) return
+                  if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview)
+                  setLogoFile(file)
+                  setLogoPreview(URL.createObjectURL(file))
+                }}
+              />
+              <button
+                type="button"
+                className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 flex items-center justify-center rounded-lg border-2 border-dashed p-3 transition-colors"
+                onClick={() => document.getElementById("logoUpload")?.click()}
+              >
+                <div className="flex w-full items-center gap-3">
+                  <div className="bg-background aspect-square h-16 w-16 overflow-hidden rounded-md border">
+                    {logoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <ImagePlus className="h-5 w-5" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <div className="text-sm font-medium">Upload logo</div>
+                    <div className="text-xs text-muted-foreground">
+                      PNG/SVG recommended. Click to choose a file.
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="primary_color">Primary club color</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="primary_color"
+                  type="color"
+                  value={form.primary_color}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, primary_color: e.target.value }))
+                  }
+                  className="h-9 w-14 p-1"
+                />
+                <Input
+                  value={form.primary_color}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, primary_color: e.target.value }))
+                  }
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="hero_headline">Headline</Label>
               <Input
                 id="hero_headline"
@@ -120,15 +211,65 @@ export function WebsiteClient({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="hero_subtext">Subheadline</Label>
-              <Textarea
+              <Input
                 id="hero_subtext"
-                rows={4}
                 value={form.hero_subtext}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, hero_subtext: e.target.value }))
                 }
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label>Hero image (16:9)</Label>
+              <input
+                id="heroUpload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  if (!file) return
+                  if (heroPreview?.startsWith("blob:")) URL.revokeObjectURL(heroPreview)
+                  setHeroFile(file)
+                  setHeroPreview(URL.createObjectURL(file))
+                }}
+              />
+              <button
+                type="button"
+                className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 aspect-video w-full overflow-hidden rounded-lg border-2 border-dashed transition-colors"
+                onClick={() => document.getElementById("heroUpload")?.click()}
+              >
+                {heroPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={heroPreview}
+                    alt="Hero preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <ImagePlus className="h-5 w-5" />
+                    <div className="text-sm font-medium">Upload hero image</div>
+                    <div className="text-xs">Recommended: 16:9</div>
+                  </div>
+                )}
+              </button>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="about_blurb">About club</Label>
+              <Textarea
+                id="about_blurb"
+                rows={5}
+                value={form.about_blurb}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, about_blurb: e.target.value }))
+                }
+                placeholder="A quick, friendly description of what your club is about."
+              />
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="tagline">Tagline</Label>
               <Input
@@ -156,7 +297,22 @@ export function WebsiteClient({
                     hero_subtext: form.hero_subtext,
                     tagline: form.tagline,
                     instagram: form.instagram,
+                    primary_color: form.primary_color,
+                    about_blurb: form.about_blurb,
                   })
+
+                  if (logoFile) {
+                    const fd = new FormData()
+                    fd.set("file", logoFile)
+                    await uploadClubLogo(fd)
+                    setLogoFile(null)
+                  }
+                  if (heroFile) {
+                    const fd = new FormData()
+                    fd.set("file", heroFile)
+                    await uploadClubHeroImage(fd)
+                    setHeroFile(null)
+                  }
                 })
               }}
             >

@@ -3,11 +3,12 @@ import { notFound } from "next/navigation"
 
 import { AboutSection } from "./components/about-section"
 import { EventsSection } from "./components/events-section"
+import { FaqsSection } from "./components/faqs-section"
 import { HeroSection } from "./components/hero-section"
 import { JoinSection } from "./components/join-section"
 import type { ClubData, ClubEvent } from "./mock-data"
 
-import { getClubBySubdomain, getUpcomingEventsByClubId, type ClubRow, type EventRow } from "@/lib/data/club-site"
+import { getClubBySubdomain, getUpcomingEventsByClubId, getFaqsByClubId, type ClubRow, type EventRow } from "@/lib/data/club-site"
 
 function clubNameFromRow(club: ClubRow, fallback: string) {
   const name = typeof club.name === "string" ? club.name : null
@@ -71,12 +72,18 @@ function formatEventTime(t: string | null) {
 }
 
 function toClubEvent(e: EventRow): ClubEvent {
+  const imageUrl = 
+    (typeof e.image_url === "string" && e.image_url) ||
+    (typeof e.event_image === "string" && e.event_image) ||
+    null;
+    
   return {
     title: e.title ?? "Untitled",
     dateLabel: formatEventDateLabel(e.event_date),
     time: formatEventTime(e.event_time),
     location: e.location_name ?? "TBD",
     runType: "Run",
+    imageUrl: imageUrl || "/club-photos/happy-group.webp",
   }
 }
 
@@ -120,11 +127,29 @@ export default async function ClubSiteHomePage({
 
   const upcomingEvents: ClubEvent[] = events.map(toClubEvent)
 
+  // Fetch club's FAQs from `faqs` table (same as clubpack_code website template)
+  const faqRows = await getFaqsByClubId(club.id)
+  const defaultFaqs: Array<{ question: string; answer: string }> = [
+    { question: "Do I need to sign up in advance?", answer: "RSVP helps us plan, but you can always show up! We welcome drop-ins. Just come a few minutes early to say hi." },
+    { question: "What pace do you run?", answer: "We have a mix of paces — we regroup often so no one gets left behind. All levels are welcome, from walkers to seasoned runners." },
+    { question: "What should I bring?", answer: "Bring water, wear comfortable shoes, and dress for the weather. If it's dark, reflective gear or a headlamp is recommended." },
+    { question: "Is there a fee to join?", answer: "Nope — we're free and open to everyone. Just show up and enjoy the community." },
+  ]
+
+  const clubFaqs = faqRows
+    .filter((row) => (row.question ?? "").trim() !== "")
+    .map((row) => ({
+      question: (row.question ?? "").trim(),
+      answer: (row.answer ?? "").trim(),
+    }))
+  const faqs = clubFaqs.length > 0 ? clubFaqs : defaultFaqs
+
   return (
     <div className="bg-background">
       <HeroSection club={clubData} />
       <AboutSection club={clubData} />
       <EventsSection events={upcomingEvents} />
+      <FaqsSection faqs={faqs} />
       <JoinSection />
     </div>
   );
