@@ -55,7 +55,7 @@ export const mdxComponents: MDXComponents = {
 
   a: (props) => (
     <Link
-      {...(props as React.ComponentProps<typeof Link>)}
+      {...(props as unknown as React.ComponentProps<typeof Link>)}
       className="text-[#0054f9] hover:text-[#0040d6] underline underline-offset-2 font-medium transition-colors"
     />
   ),
