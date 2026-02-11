@@ -78,7 +78,7 @@ export const mdxComponents: MDXComponents = {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       {...props}
-      alt={props.alt ?? ""}
+      alt={typeof props.alt === "string" ? props.alt : ""}
       className="rounded-xl my-6 w-full border border-gray-200"
       loading="lazy"
     />
