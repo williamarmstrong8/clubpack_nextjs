@@ -1,6 +1,8 @@
-import type { MDXComponents } from "mdx/types"
 import Image from "next/image"
 import Link from "next/link"
+
+/** Type for MDX custom components (avoids mdx/types dependency). */
+type MDXComponents = Record<string, React.ComponentType<Record<string, unknown>>>
 
 /**
  * MDX components styled for the marketing light theme:
