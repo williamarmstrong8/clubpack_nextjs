@@ -45,6 +45,19 @@ export function WaiversClient({
   const [isPending, startTransition] = React.useTransition()
   const [settings, setSettings] = React.useState(initial.settings)
   const [templateFile, setTemplateFile] = React.useState<File | null>(null)
+  const [showUploadWaiver, setShowUploadWaiver] = React.useState(false)
+  const [submissionsPage, setSubmissionsPage] = React.useState(1)
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(initial.submissions.length / pageSize))
+  const paginatedSubmissions = initial.submissions.slice(
+    (submissionsPage - 1) * pageSize,
+    submissionsPage * pageSize,
+  )
+
+  const waiverDisplayName = settings.waiver_url
+    ? "waiver-template.pdf"
+    : null
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -135,66 +148,80 @@ export function WaiversClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Waiver template</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            <div className="rounded-lg border p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+          <CardContent className="grid gap-3 min-w-0">
+            <div className="rounded-lg border p-3 min-w-0">
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">Current template</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {settings.waiver_url ?? "No template uploaded yet."}
+                    {waiverDisplayName ?? "No template uploaded yet."}
                   </div>
                 </div>
-                {settings.waiver_url ? (
-                  <Button asChild variant="outline" size="sm">
-                    <a href={settings.waiver_url} target="_blank" rel="noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      View
-                    </a>
+                <div className="flex shrink-0 items-center gap-2">
+                  {settings.waiver_url ? (
+                    <Button asChild variant="outline" size="sm">
+                      <a href={settings.waiver_url} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View
+                      </a>
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUploadWaiver((v) => !v)}
+                  >
+                    {showUploadWaiver ? "Cancel" : settings.waiver_url ? "Change waiver" : "Add waiver"}
                   </Button>
-                ) : null}
+                </div>
               </div>
             </div>
 
-            <input
-              id="waiverUpload"
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)}
-            />
-            <button
-              type="button"
-              className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 flex items-center justify-between gap-3 rounded-lg border-2 border-dashed p-3 text-left transition-colors"
-              onClick={() => document.getElementById("waiverUpload")?.click()}
-            >
-              <div className="min-w-0">
-                <div className="text-sm font-medium">Upload PDF</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {templateFile ? templateFile.name : "Choose a waiver template."}
-                </div>
-              </div>
-              <FileUp className="h-5 w-5 text-muted-foreground" />
-            </button>
+            {showUploadWaiver ? (
+              <>
+                <input
+                  id="waiverUpload"
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 flex items-center justify-between gap-3 rounded-lg border-2 border-dashed p-3 text-left transition-colors min-w-0"
+                  onClick={() => document.getElementById("waiverUpload")?.click()}
+                >
+                  <div className="min-w-0 truncate">
+                    <div className="text-sm font-medium">Upload PDF</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {templateFile ? templateFile.name : "Choose a waiver template."}
+                    </div>
+                  </div>
+                  <FileUp className="h-5 w-5 shrink-0 text-muted-foreground" />
+                </button>
 
-            <Button
-              variant="outline"
-              disabled={isPending || !templateFile}
-              onClick={() => {
-                if (!templateFile) return
-                startTransition(async () => {
-                  const fd = new FormData()
-                  fd.set("file", templateFile)
-                  await uploadWaiverTemplate(fd)
-                  setTemplateFile(null)
-                })
-              }}
-            >
-              {isPending ? "Uploading..." : "Upload"}
-            </Button>
+                <Button
+                  variant="outline"
+                  disabled={isPending || !templateFile}
+                  onClick={() => {
+                    if (!templateFile) return
+                    startTransition(async () => {
+                      const fd = new FormData()
+                      fd.set("file", templateFile)
+                      await uploadWaiverTemplate(fd)
+                      setTemplateFile(null)
+                      setShowUploadWaiver(false)
+                    })
+                  }}
+                >
+                  {isPending ? "Uploading..." : "Upload"}
+                </Button>
+              </>
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -215,7 +242,7 @@ export function WaiversClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {initial.submissions.map((s) => (
+                {paginatedSubmissions.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">
                       {s.full_name ?? "—"}
@@ -262,6 +289,33 @@ export function WaiversClient({
               </TableBody>
             </Table>
           </div>
+          {initial.submissions.length > pageSize ? (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {(submissionsPage - 1) * pageSize + 1}–
+                {Math.min(submissionsPage * pageSize, initial.submissions.length)} of{" "}
+                {initial.submissions.length}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={submissionsPage <= 1}
+                  onClick={() => setSubmissionsPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={submissionsPage >= totalPages}
+                  onClick={() => setSubmissionsPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

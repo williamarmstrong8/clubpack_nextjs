@@ -120,14 +120,16 @@ export default function SolutionSection() {
                   <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mt-3">Published Online</p>
                 </div>
 
+                <div className="flex justify-center w-full">
                 <a
                   href="https://my.joinclubpack.com/signup"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mx-auto inline-flex items-center justify-center bg-[#0054f9] hover:bg-[#0040d6] text-white font-normal py-3 px-10 rounded-xl transition-colors duration-200"
+                  className="inline-flex items-center justify-center bg-[#0054f9] hover:bg-[#0040d6] text-white font-normal py-3 px-10 rounded-xl transition-colors duration-200"
                 >
                   Create my site
                 </a>
+              </div>
               </div>
             </div>
           </div>
@@ -138,7 +140,7 @@ export default function SolutionSection() {
             <div className="lg:col-span-1 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col h-full relative overflow-hidden">
               <div className="flex-1 relative z-10" />
 
-              <div className="absolute bottom-0 left-1 w-[110%] h-[360px] translate-x-24 translate-y-16 scale-125">
+              <div className="absolute bottom-0 left-1 w-[110%] h-[360px] translate-x-24 -translate-y-10 scale-125">
                 <Image
                   src="/solution/sidebar.png"
                   alt="ClubPack sidebar interface"

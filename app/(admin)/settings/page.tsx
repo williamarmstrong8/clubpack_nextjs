@@ -13,13 +13,6 @@ type ClubRow = {
   description: string | null
 }
 
-type ClubSettingsRow = {
-  show_event_calendar: boolean | null
-  show_contact_page: boolean | null
-  show_explore_page: boolean | null
-  require_login_to_rsvp: boolean | null
-}
-
 export default async function SettingsPage() {
   const { profile } = await getAdminContext()
 
@@ -37,18 +30,11 @@ export default async function SettingsPage() {
   const supabase = await createClient()
   const clubId = profile.club_id
 
-  const [clubRes, settingsRes] = await Promise.all([
-    supabase
-      .from("clubs")
-      .select("name, email, phone_number, meeting_location, meeting_time, description")
-      .eq("id", clubId)
-      .single(),
-    supabase
-      .from("club_settings")
-      .select("show_event_calendar, show_contact_page, show_explore_page, require_login_to_rsvp")
-      .eq("club_id", clubId)
-      .maybeSingle(),
-  ])
+  const clubRes = await supabase
+    .from("clubs")
+    .select("name, email, phone_number, meeting_location, meeting_time, description")
+    .eq("id", clubId)
+    .single()
 
   if (clubRes.error || !clubRes.data) {
     return (
@@ -62,7 +48,6 @@ export default async function SettingsPage() {
   }
 
   const club = clubRes.data as ClubRow
-  const settings = (settingsRes.data as ClubSettingsRow | null) ?? null
 
   return (
     <SettingsClient
@@ -74,12 +59,6 @@ export default async function SettingsPage() {
           meeting_location: club.meeting_location ?? "",
           meeting_time: club.meeting_time ?? "",
           description: club.description ?? "",
-        },
-        preferences: {
-          show_event_calendar: settings?.show_event_calendar ?? true,
-          show_contact_page: settings?.show_contact_page ?? true,
-          show_explore_page: settings?.show_explore_page ?? true,
-          require_login_to_rsvp: settings?.require_login_to_rsvp ?? false,
         },
       }}
     />

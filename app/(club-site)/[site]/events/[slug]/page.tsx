@@ -2,13 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin } from "lucide-react";
 
-import { getClubBySubdomain, getEventById } from "@/lib/data/club-site";
+import { getClubBySubdomain, getEventById, getRequireLoginToRsvp, getRsvpsForEvent } from "@/lib/data/club-site";
+import { createClient } from "@/lib/supabase/server";
+
+import { EventRsvpCard } from "./event-rsvp-card";
 
 function formatEventDateLabel(isoDate: string | null) {
   if (!isoDate) return "TBD";
@@ -63,13 +65,43 @@ export default async function EventPage({
     (typeof event.event_image === "string" && event.event_image) ||
     "/club-photos/happy-group.webp";
 
-  // Mock RSVPs - in production, fetch from database
-  const mockRsvps = [
-    { id: "1", name: "John Doe", avatar: null },
-    { id: "2", name: "Jane Smith", avatar: null },
-    { id: "3", name: "Mike Johnson", avatar: null },
-    { id: "4", name: "Sarah Williams", avatar: null },
-  ];
+  const [rsvps, requireLoginToRsvp, membership, existingRsvp] = await Promise.all([
+    getRsvpsForEvent(club.id, event.id),
+    getRequireLoginToRsvp(club.id),
+    (async () => {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase
+        .from("memberships")
+        .select("id")
+        .eq("club_id", club.id)
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      return data as { id: string } | null;
+    })(),
+    (async () => {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data: mem } = await supabase
+        .from("memberships")
+        .select("id")
+        .eq("club_id", club.id)
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      if (!mem) return false;
+      const { data: rsvp } = await supabase
+        .from("rsvps")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("membership_id", mem.id)
+        .maybeSingle();
+      return !!rsvp;
+    })(),
+  ]);
+
+  const maxAttendees = typeof event.max_attendees === "number" ? event.max_attendees : null;
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-10 sm:px-6 lg:px-8">
@@ -98,7 +130,7 @@ export default async function EventPage({
           <div className="flex flex-col gap-2 text-base text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center">
             <span className="inline-flex items-center gap-2">
               <Clock className="size-5" />
-              {formatEventTime(event.event_time)}
+              {formatEventTime(event.event_time)}{event.end_time ? ` – ${formatEventTime(typeof event.end_time === "string" ? event.end_time : null)}` : ""}
             </span>
             <span className="hidden sm:inline">·</span>
             <span className="inline-flex items-center gap-2">
@@ -136,40 +168,16 @@ export default async function EventPage({
         </Card>
 
         {/* RSVP Card */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">RSVPs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center">
-              <div className="flex -space-x-2">
-                {mockRsvps.slice(0, 4).map((rsvp, index) => (
-                  <Avatar
-                    key={rsvp.id}
-                    className="size-10 border-2 border-background"
-                    style={{ zIndex: mockRsvps.length - index }}
-                  >
-                    <AvatarImage src={rsvp.avatar || undefined} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                      {rsvp.name.split(" ").map((n) => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-              <span className="ml-3 text-sm text-muted-foreground">
-                {mockRsvps.length} {mockRsvps.length === 1 ? "person" : "people"} going
-              </span>
-            </div>
-            
-            <Button className="w-full bg-primary hover:bg-primary/90" size="lg">
-              RSVP for this event
-            </Button>
-
-            <p className="text-xs text-muted-foreground text-center">
-              RSVP helps us plan. You can always show up!
-            </p>
-          </CardContent>
-        </Card>
+        <EventRsvpCard
+          eventId={event.id}
+          clubId={club.id}
+          site={site}
+          rsvps={rsvps}
+          maxAttendees={maxAttendees}
+          requireLoginToRsvp={requireLoginToRsvp}
+          isLoggedIn={!!membership}
+          alreadyRsvped={existingRsvp}
+        />
       </div>
     </div>
   );

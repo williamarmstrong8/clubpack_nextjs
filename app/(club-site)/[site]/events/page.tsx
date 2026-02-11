@@ -43,6 +43,7 @@ type UiEvent = {
   title: string;
   dateLabel: string;
   time: string;
+  endTime?: string;
   location: string;
   runType: string;
   imageUrl: string;
@@ -59,6 +60,7 @@ function toUiEvent(e: EventRow): UiEvent {
     title: e.title ?? "Untitled",
     dateLabel: formatEventDateLabel(e.event_date),
     time: formatEventTime(e.event_time),
+    endTime: e.end_time ? formatEventTime(e.end_time) : undefined,
     location: e.location_name ?? "TBD",
     runType: "Run",
     imageUrl: imageUrl || "/club-photos/happy-group.webp",
@@ -119,7 +121,7 @@ export default async function ClubEventsPage({
               <CardDescription className="flex flex-col gap-1.5 pt-1">
                 <span className="inline-flex items-center gap-2">
                   <Clock className="size-4" />
-                  {event.time}
+                  {event.time}{event.endTime && ` – ${event.endTime}`}
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <MapPin className="size-4" />

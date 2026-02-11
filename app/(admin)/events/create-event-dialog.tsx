@@ -53,49 +53,87 @@ function timeOptions(stepMinutes = 15) {
   return times
 }
 
+export type CreateEventPrefill = {
+  title?: string
+  description?: string
+  location_name?: string
+  image_url?: string
+}
+
 export function CreateEventDialog({
   trigger,
+  prefill,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
-  trigger: React.ReactNode
+  trigger?: React.ReactNode
+  prefill?: CreateEventPrefill
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled
+    ? (v: boolean) => controlledOnOpenChange?.(v)
+    : setInternalOpen
+
   const [isPending, startTransition] = React.useTransition()
 
   const [coverFile, setCoverFile] = React.useState<File | null>(null)
   const [coverPreview, setCoverPreview] = React.useState<string | null>(null)
 
-  const [form, setForm] = React.useState({
-    title: "",
-    event_date: "",
-    event_time: "",
-    location_name: "",
-    description: "",
-    hasCapacity: true,
-    max_attendees: 50,
-  })
+  const defaultForm = React.useMemo(
+    () => ({
+      title: prefill?.title ?? "",
+      event_date: "",
+      event_time: "",
+      location_name: prefill?.location_name ?? "",
+      description: prefill?.description ?? "",
+      hasCapacity: false,
+      max_attendees: 50,
+    }),
+    [prefill],
+  )
+
+  const [form, setForm] = React.useState(defaultForm)
+
+  // Reset form when prefill changes or dialog opens
+  React.useEffect(() => {
+    if (open) {
+      setForm({
+        title: prefill?.title ?? "",
+        event_date: "",
+        event_time: "",
+        location_name: prefill?.location_name ?? "",
+        description: prefill?.description ?? "",
+        hasCapacity: false,
+        max_attendees: 50,
+      })
+      setCoverFile(null)
+      if (coverPreview?.startsWith("blob:")) URL.revokeObjectURL(coverPreview)
+      setCoverPreview(prefill?.image_url ?? null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefill])
 
   React.useEffect(() => {
     return () => {
-      if (coverPreview) URL.revokeObjectURL(coverPreview)
+      if (coverPreview?.startsWith("blob:")) URL.revokeObjectURL(coverPreview)
     }
   }, [coverPreview])
 
   const times = React.useMemo(() => timeOptions(15), [])
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        setOpen(v)
-      }}
-    >
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[640px]">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+      <DialogContent className="sm:max-w-[640px] h-[85vh] max-h-[85vh] overflow-hidden grid !grid-rows-[auto_minmax(0,1fr)_auto]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Create event</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="grid gap-4 overflow-y-auto overflow-x-hidden -mx-6 px-6 min-h-0">
           <div className="grid gap-2">
             <Label htmlFor="create-title">Title</Label>
             <Input
@@ -223,6 +261,7 @@ export function CreateEventDialog({
             <Textarea
               id="create-description"
               rows={4}
+              className="resize-none min-h-[6rem] max-h-[10rem] overflow-y-auto [field-sizing:fixed]"
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
@@ -265,7 +304,7 @@ export function CreateEventDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>

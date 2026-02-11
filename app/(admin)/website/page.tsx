@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic"
 
 type ClubRow = {
   subdomain: string | null
+  name: string | null
   hero_headline: string | null
   hero_subtext: string | null
   tagline: string | null
@@ -35,7 +36,7 @@ export default async function WebsitePage() {
     supabase
       .from("clubs")
       .select(
-        "subdomain, hero_headline, hero_subtext, tagline, instagram, primary_color, logo_url, hero_image_url, about_blurb",
+        "subdomain, name, hero_headline, hero_subtext, tagline, instagram, primary_color, logo_url, hero_image_url, about_blurb",
       )
       .eq("id", profile.club_id)
       .single(),

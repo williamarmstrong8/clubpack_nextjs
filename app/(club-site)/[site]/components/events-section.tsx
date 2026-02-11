@@ -59,7 +59,7 @@ export function EventsSection({ events }: { events: ClubEvent[] }) {
                 <div className="space-y-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Clock className="size-4" />
-                    <span>{event.time}</span>
+                    <span>{event.time}{event.endTime && ` – ${event.endTime}`}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="size-4" />

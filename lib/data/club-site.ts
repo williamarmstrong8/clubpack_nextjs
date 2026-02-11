@@ -28,8 +28,10 @@ export type EventRow = {
   description?: string | null
   event_date: string | null
   event_time: string | null
+  end_time?: string | null
   location_name?: string | null
   status?: string | null
+  max_attendees?: number | null
   [key: string]: unknown
 }
 
@@ -106,6 +108,69 @@ export const getEventById = cache(async (clubId: string, eventId: string): Promi
 
   if (error) throw new Error(error.message)
   return (data as EventRow | null) ?? null
+})
+
+export type EventRsvpRow = {
+  id: string
+  name: string | null
+  avatar_url: string | null
+}
+
+/**
+ * Fetch RSVPs for an event. Uses name/avatar from rsvps, falling back to memberships when null.
+ */
+export const getRsvpsForEvent = cache(async (clubId: string, eventId: string): Promise<EventRsvpRow[]> => {
+  const supabase = await createClient()
+  const cId = (clubId ?? "").trim()
+  const eId = (eventId ?? "").trim()
+  if (!cId || !eId) return []
+
+  const { data, error } = await supabase
+    .from("rsvps")
+    .select("id, name, avatar_url, membership_id")
+    .eq("club_id", cId)
+    .eq("event_id", eId)
+    .order("created_at", { ascending: true })
+
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as Array<{ id: string; name: string | null; avatar_url: string | null; membership_id: string | null }>
+
+  // If any row is missing name/avatar, fetch from memberships
+  const membershipIds = rows.filter((r) => r.membership_id && !r.name).map((r) => r.membership_id as string)
+  let membershipMap = new Map<string, { name: string | null; avatar_url: string | null }>()
+  if (membershipIds.length > 0) {
+    const { data: members } = await supabase
+      .from("memberships")
+      .select("id, name, avatar_url")
+      .in("id", membershipIds)
+    if (members) {
+      membershipMap = new Map((members as Array<{ id: string; name: string | null; avatar_url: string | null }>).map((m) => [m.id, { name: m.name ?? null, avatar_url: m.avatar_url ?? null }]))
+    }
+  }
+
+  return rows.map((r) => {
+    const fromMembership = r.membership_id ? membershipMap.get(r.membership_id) : null
+    return {
+      id: r.id,
+      name: r.name ?? fromMembership?.name ?? null,
+      avatar_url: r.avatar_url ?? fromMembership?.avatar_url ?? null,
+    }
+  })
+})
+
+export const getRequireLoginToRsvp = cache(async (clubId: string): Promise<boolean> => {
+  const supabase = await createClient()
+  const id = (clubId ?? "").trim()
+  if (!id) return true
+
+  const { data, error } = await supabase
+    .from("club_settings")
+    .select("require_login_to_rsvp")
+    .eq("club_id", id)
+    .maybeSingle()
+
+  if (error) return true
+  return (data as { require_login_to_rsvp?: boolean } | null)?.require_login_to_rsvp ?? true
 })
 
 /**

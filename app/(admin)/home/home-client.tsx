@@ -14,6 +14,7 @@ export type HomeStat = {
   title: string
   value: string
   delta: string
+  deltaLabel: string
 }
 
 export type RecentActivityItem = {
@@ -50,8 +51,11 @@ export function HomeClient({
               </CardTitle>
               <Badge variant="secondary">{stat.delta}</Badge>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex items-baseline justify-between gap-2">
               <div className="text-3xl font-semibold">{stat.value}</div>
+              <div className="shrink-0 text-right text-xs text-muted-foreground">
+                {stat.deltaLabel}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -93,10 +97,10 @@ export function HomeClient({
           <CardHeader>
             <CardTitle className="text-base">Recent activity</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2">
+          <CardContent className="grid gap-1.5">
             {recentActivity.map((row) => (
-              <Card key={row.id} className="shadow-none">
-                <CardContent className="flex items-center justify-between gap-4 p-3">
+              <Card key={row.id} className="shadow-none py-0 gap-0">
+                <CardContent className="flex items-center justify-between gap-4 px-3 py-2">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{row.title}</div>
                     <div className="truncate text-xs text-muted-foreground">

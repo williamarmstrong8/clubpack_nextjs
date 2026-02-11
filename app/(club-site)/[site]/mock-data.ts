@@ -10,6 +10,7 @@ export type ClubEvent = {
   title: string;
   dateLabel: string;
   time: string;
+  endTime?: string;
   location: string;
   runType: string;
   imageUrl?: string;

@@ -4,12 +4,33 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getAdminContext } from "@/lib/admin/get-admin-context"
 
+export async function updateClubBranding(input: {
+  name: string
+  primary_color?: string
+}) {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("clubs")
+    .update({
+      name: input.name,
+      primary_color: input.primary_color,
+    })
+    .eq("id", profile.club_id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath("/website")
+  revalidatePath("/settings/website")
+}
+
 export async function updateClubWebsiteContent(input: {
   hero_headline: string
   hero_subtext: string
   tagline: string
   instagram: string
-  primary_color?: string
   about_blurb?: string
 }) {
   const { profile } = await getAdminContext()
@@ -23,7 +44,6 @@ export async function updateClubWebsiteContent(input: {
       hero_subtext: input.hero_subtext,
       tagline: input.tagline,
       instagram: input.instagram,
-      primary_color: input.primary_color,
       about_blurb: input.about_blurb,
     })
     .eq("id", profile.club_id)

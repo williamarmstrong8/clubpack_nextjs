@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -33,7 +32,7 @@ export default function HeroSection() {
             platform.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <div className="flex justify-center mb-12">
             <Button
               asChild
               className="h-auto bg-[#0054f9] hover:bg-[#0040d6] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:ring-blue-500/50"
@@ -45,13 +44,6 @@ export default function HeroSection() {
               >
                 Start Building Free
               </a>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="h-auto text-gray-700 border-gray-300 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 hover:border-gray-400 transition-all duration-200"
-            >
-              <Link href="/features">Watch Demo</Link>
             </Button>
           </div>
         </div>

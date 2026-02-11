@@ -55,15 +55,17 @@ export default async function HomePage() {
   const todayIso = new Date().toISOString().slice(0, 10)
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const startThisMonth = new Date(y, m, 1).toISOString()
 
   const [
     membersTotalRes,
-    membersNewWeekRes,
-    membersPrevWeekRes,
+    membersNewThisMonthRes,
+    totalEventsRes,
     upcomingEventsRes,
+    rsvpsThisMonthRes,
     rsvpsThisWeekRes,
-    rsvpsPrevWeekRes,
     activityRes,
     clubRes,
   ] = await Promise.all([
@@ -72,13 +74,11 @@ export default async function HomePage() {
       .from("memberships")
       .select("id", { count: "exact", head: true })
       .eq("club_id", clubId)
-      .gte("joined_at", sevenDaysAgo),
+      .gte("joined_at", startThisMonth),
     supabase
-      .from("memberships")
+      .from("events")
       .select("id", { count: "exact", head: true })
-      .eq("club_id", clubId)
-      .gte("joined_at", fourteenDaysAgo)
-      .lt("joined_at", sevenDaysAgo),
+      .eq("club_id", clubId),
     supabase
       .from("events")
       .select("id", { count: "exact", head: true })
@@ -88,13 +88,12 @@ export default async function HomePage() {
       .from("rsvps")
       .select("id", { count: "exact", head: true })
       .eq("club_id", clubId)
-      .gte("created_at", sevenDaysAgo),
+      .gte("created_at", startThisMonth),
     supabase
       .from("rsvps")
       .select("id", { count: "exact", head: true })
       .eq("club_id", clubId)
-      .gte("created_at", fourteenDaysAgo)
-      .lt("created_at", sevenDaysAgo),
+      .gte("created_at", sevenDaysAgo),
     supabase
       .from("activity_log")
       .select("id, created_at, action_type, detail")
@@ -105,15 +104,13 @@ export default async function HomePage() {
   ])
 
   const membersTotal = membersTotalRes.count ?? 0
-  const membersNewWeek = membersNewWeekRes.count ?? 0
-  const membersPrevWeek = membersPrevWeekRes.count ?? 0
-  const membersDelta = membersNewWeek - membersPrevWeek
+  const newMembersThisMonth = membersNewThisMonthRes.count ?? 0
 
+  const totalEvents = totalEventsRes.count ?? 0
   const upcomingEvents = upcomingEventsRes.count ?? 0
 
+  const rsvpsThisMonth = rsvpsThisMonthRes.count ?? 0
   const rsvpsThisWeek = rsvpsThisWeekRes.count ?? 0
-  const rsvpsPrevWeek = rsvpsPrevWeekRes.count ?? 0
-  const rsvpsDelta = rsvpsThisWeek - rsvpsPrevWeek
 
   const recentActivity = ((activityRes.data ?? []) as ActivityRow[]).map((a) => ({
     id: a.id,
@@ -128,9 +125,9 @@ export default async function HomePage() {
     : "https://joinclubpack.com/signup"
 
   const stats = [
-    { title: "Total members", value: String(membersTotal), delta: membersDelta >= 0 ? `+${membersDelta}` : String(membersDelta) },
-    { title: "Upcoming events", value: String(upcomingEvents), delta: "—" },
-    { title: "RSVPs this week", value: String(rsvpsThisWeek), delta: rsvpsDelta >= 0 ? `+${rsvpsDelta}` : String(rsvpsDelta) },
+    { title: "Total members", value: String(membersTotal), delta: String(newMembersThisMonth), deltaLabel: "new this month" },
+    { title: "Total events", value: String(totalEvents), delta: String(upcomingEvents), deltaLabel: "upcoming events" },
+    { title: "RSVPs this month", value: String(rsvpsThisMonth), delta: String(rsvpsThisWeek), deltaLabel: "this week" },
   ]
 
   return <HomeClient stats={stats} recentActivity={recentActivity} inviteUrl={inviteUrl} />

@@ -26,14 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -143,6 +135,7 @@ function badgeForEvent(e: EventRow) {
 
 export function EventsClient({ events }: { events: EventRow[] }) {
   const [tab, setTab] = React.useState<"upcoming" | "past">("upcoming")
+  const [pastVisible, setPastVisible] = React.useState(6)
   const [viewOpen, setViewOpen] = React.useState(false)
   const [viewing, setViewing] = React.useState<EventRow | null>(null)
   const [editOpen, setEditOpen] = React.useState(false)
@@ -224,7 +217,10 @@ export function EventsClient({ events }: { events: EventRow[] }) {
           </div>
           <Tabs
             value={tab}
-            onValueChange={(v) => setTab(v === "past" ? "past" : "upcoming")}
+            onValueChange={(v) => {
+              setTab(v === "past" ? "past" : "upcoming")
+              setPastVisible(6)
+            }}
           >
             <TabsList>
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -233,60 +229,74 @@ export function EventsClient({ events }: { events: EventRow[] }) {
           </Tabs>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="hidden md:table-cell">Location</TableHead>
-                  <TableHead className="hidden lg:table-cell">Attendance</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((e) => (
-                  <TableRow
-                    key={e.id}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setViewing(e)
-                      setViewOpen(true)
-                    }}
-                  >
-                    <TableCell className="font-medium">{e.title ?? "Untitled"}</TableCell>
-                    <TableCell>
+          {filtered.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              No {tab} events yet.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(tab === "past" ? filtered.slice(0, pastVisible) : filtered).map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  className="group relative flex flex-col overflow-hidden rounded-lg border bg-card text-left shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    setViewing(e)
+                    setViewOpen(true)
+                  }}
+                >
+                  <div className="aspect-video w-full shrink-0 overflow-hidden bg-muted">
+                    {e.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.image_url}
+                        alt=""
+                        className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <CalendarPlus className="h-12 w-12 opacity-40" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-2 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold leading-tight line-clamp-2">
+                        {e.title ?? "Untitled"}
+                      </h3>
+                      {badgeForEvent(e)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
                       {e.event_date ? formatDate(e.event_date) : "—"}
                       {e.event_time ? ` • ${formatTimeLabel(e.event_time)}` : ""}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <span className="inline-flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        {e.location_name ?? "—"}
+                    </p>
+                    {e.location_name ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{e.location_name}</span>
                       </span>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <span className="inline-flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        {e.rsvpCount}
-                        {typeof e.max_attendees === "number" ? `/${e.max_attendees}` : ""}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">{badgeForEvent(e)}</TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center">
-                      <div className="text-sm text-muted-foreground">
-                        No {tab} events yet.
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </div>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4 shrink-0" />
+                      {e.rsvpCount}
+                      {typeof e.max_attendees === "number" ? `/${e.max_attendees}` : ""}{" "}
+                      attending
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === "past" && filtered.length > pastVisible && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={() => setPastVisible((v) => v + 6)}
+              >
+                Load more
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

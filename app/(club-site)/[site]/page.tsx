@@ -81,6 +81,7 @@ function toClubEvent(e: EventRow): ClubEvent {
     title: e.title ?? "Untitled",
     dateLabel: formatEventDateLabel(e.event_date),
     time: formatEventTime(e.event_time),
+    endTime: e.end_time ? formatEventTime(e.end_time) : undefined,
     location: e.location_name ?? "TBD",
     runType: "Run",
     imageUrl: imageUrl || "/club-photos/happy-group.webp",

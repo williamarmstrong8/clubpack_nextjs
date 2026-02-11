@@ -50,8 +50,7 @@ export default async function WaiversPage() {
       .from("waiver_submissions")
       .select("id, created_at, membership_id, submitted_waiver_url, full_name, email, photo_url")
       .eq("club_id", clubId)
-      .order("created_at", { ascending: false })
-      .limit(50),
+      .order("created_at", { ascending: false }),
   ])
 
   const settings = (settingsRes.data as WaiverSettingsRow | null) ?? null

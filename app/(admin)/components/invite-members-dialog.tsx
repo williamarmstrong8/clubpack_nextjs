@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -103,12 +102,6 @@ export function InviteMembersDialog({
             </div>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

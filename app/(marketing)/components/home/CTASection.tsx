@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const CTASection = () => {
@@ -27,7 +26,7 @@ const CTASection = () => {
               Join the most innovative clubs building their community on ClubPack. Get started in minutes.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <div className="flex justify-center">
               <Button
                 asChild
                 className="h-auto bg-white text-[#0054f9] hover:bg-gray-50 px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-1 active:scale-[0.98] w-full sm:w-auto"
@@ -39,13 +38,6 @@ const CTASection = () => {
                 >
                   Create your club free
                 </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto bg-transparent text-white border-2 border-white/20 hover:bg-white/5 px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-200 w-full sm:w-auto backdrop-blur-sm"
-              >
-                <Link href="/contact">Book a demo</Link>
               </Button>
             </div>
             
