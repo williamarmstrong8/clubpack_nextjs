@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isBefore, startOfDay } from "date-fns"
 import { CalendarPlus, MapPin, Users } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -25,13 +26,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
 import { cn } from "@/lib/utils"
-import { updateEvent } from "./actions"
+import { getEventRsvps, updateEvent, type EventRsvpForView } from "./actions"
 import { CreateEventDialog } from "./create-event-dialog"
+
+function initials(name: string | null): string {
+  if (!name || !name.trim()) return "?"
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}
 
 export type EventRow = {
   id: string
@@ -39,6 +52,7 @@ export type EventRow = {
   description?: string | null
   event_date: string | null
   event_time: string | null
+  end_time?: string | null
   image_url?: string | null
   location_name?: string | null
   status?: string | null
@@ -81,6 +95,34 @@ function timeOptions(stepMinutes = 15) {
     times.push({ value, label })
   }
   return times
+}
+
+function timeToMinutes(value: string) {
+  const [h, m] = value.split(":").map(Number)
+  return h * 60 + (m ?? 0)
+}
+
+function filterFutureTimes(
+  times: Array<{ value: string; label: string }>,
+  eventDateIso: string,
+  options?: { afterTimeValue?: string; forEndTime?: boolean }
+): Array<{ value: string; label: string }> {
+  if (!eventDateIso) return times
+  const selected = dateFromIso(eventDateIso)
+  if (!selected) return times
+  const today = startOfDay(new Date())
+  const selectedDay = startOfDay(selected)
+  const isToday = selectedDay.getTime() === today.getTime()
+  const now = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const roundUpMins = Math.ceil(nowMins / 15) * 15
+  let minMins = 0
+  if (isToday) minMins = roundUpMins
+  if (options?.afterTimeValue) {
+    const afterMins = timeToMinutes(options.afterTimeValue)
+    minMins = Math.max(minMins, options.forEndTime ? afterMins + 15 : afterMins)
+  }
+  return times.filter((t) => timeToMinutes(t.value) >= minMins)
 }
 
 function parseTimeParts(input: string) {
@@ -138,6 +180,8 @@ export function EventsClient({ events }: { events: EventRow[] }) {
   const [pastVisible, setPastVisible] = React.useState(6)
   const [viewOpen, setViewOpen] = React.useState(false)
   const [viewing, setViewing] = React.useState<EventRow | null>(null)
+  const [viewRsvps, setViewRsvps] = React.useState<EventRsvpForView[] | null>(null)
+  const [rsvpsAllOpen, setRsvpsAllOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<EventRow | null>(null)
 
@@ -147,6 +191,7 @@ export function EventsClient({ events }: { events: EventRow[] }) {
     title: "",
     event_date: "",
     event_time: "",
+    end_time: "",
     location_name: "",
     description: "",
     status: "active",
@@ -185,6 +230,29 @@ export function EventsClient({ events }: { events: EventRow[] }) {
     })
 
   const times = React.useMemo(() => timeOptions(15), [])
+  const editStartTimeOptions = React.useMemo(
+    () => filterFutureTimes(times, editForm.event_date),
+    [times, editForm.event_date],
+  )
+  const editEndTimeOptions = React.useMemo(
+    () =>
+      filterFutureTimes(times, editForm.event_date, {
+        afterTimeValue: editForm.event_time || undefined,
+        forEndTime: true,
+      }),
+    [times, editForm.event_date, editForm.event_time],
+  )
+
+  React.useEffect(() => {
+    if (viewOpen && viewing?.id) {
+      getEventRsvps(viewing.id).then(setViewRsvps)
+    } else {
+      setViewRsvps(null)
+      setRsvpsAllOpen(false)
+    }
+  }, [viewOpen, viewing?.id])
+
+  const displayRsvps = viewRsvps?.slice(0, 8) ?? []
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -268,7 +336,9 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {e.event_date ? formatDate(e.event_date) : "—"}
-                      {e.event_time ? ` • ${formatTimeLabel(e.event_time)}` : ""}
+                      {e.event_time
+                        ? ` • ${formatTimeLabel(e.event_time)}${e.end_time ? ` – ${formatTimeLabel(e.end_time)}` : ""}`
+                        : ""}
                     </p>
                     {e.location_name ? (
                       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -307,63 +377,109 @@ export function EventsClient({ events }: { events: EventRow[] }) {
           if (!v) setViewing(null)
         }}
       >
-        <DialogContent className="sm:max-w-[720px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[720px] h-[85vh] max-h-[85vh] flex flex-col gap-4 !grid-rows-none p-0">
+          <DialogHeader className="shrink-0 px-6 pt-6">
             <DialogTitle>{viewing?.title ?? "Event"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4">
-            <div className="border-muted-foreground/25 bg-muted/15 aspect-video overflow-hidden rounded-lg border">
-              {viewing?.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={viewing.image_url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  No cover image
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
+            <div className="grid gap-4">
+              <div className="border-muted-foreground/25 bg-muted/15 aspect-video overflow-hidden rounded-lg border">
+                {viewing?.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={viewing.image_url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    No cover image
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                  <span>
+                    {viewing?.event_date ? formatDate(viewing.event_date) : "—"}
+                    {viewing?.event_time
+                      ? ` • ${formatTimeLabel(viewing.event_time)}${viewing?.end_time ? ` – ${formatTimeLabel(viewing.end_time)}` : ""}`
+                      : ""}
+                  </span>
+                  {viewing?.location_name ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="opacity-60">•</span>
+                      <MapPin className="h-4 w-4" />
+                      <span>{viewing.location_name}</span>
+                    </span>
+                  ) : null}
                 </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {viewRsvps === null ? (
+                      <>
+                        <div className="flex -space-x-2">
+                          {[1, 2, 3, 4].map((i) => (
+                            <Skeleton
+                              key={i}
+                              className="size-9 shrink-0 rounded-full border-2 border-background"
+                            />
+                          ))}
+                        </div>
+                        <Skeleton className="h-4 w-28" />
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex -space-x-2">
+                          {displayRsvps.map((rsvp, index) => (
+                            <Avatar
+                              key={rsvp.id}
+                              className="size-9 border-2 border-background"
+                              style={{ zIndex: displayRsvps.length - index }}
+                            >
+                              <AvatarImage
+                                src={rsvp.avatar_url ?? undefined}
+                                alt={rsvp.name ?? undefined}
+                              />
+                              <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
+                                {initials(rsvp.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {viewRsvps.length}{" "}
+                          {viewRsvps.length === 1 ? "person" : "people"} going
+                          {typeof viewing?.max_attendees === "number"
+                            ? ` · ${viewing.max_attendees} spots`
+                            : ""}
+                        </span>
+                        {viewRsvps.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0 text-muted-foreground"
+                            onClick={() => setRsvpsAllOpen(true)}
+                          >
+                            View all
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {viewing?.description ? (
+                <div className="text-sm leading-relaxed">{viewing.description}</div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No description.</div>
               )}
             </div>
-
-            <div className="grid gap-2 text-sm">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-                <span>
-                  {viewing?.event_date ? formatDate(viewing.event_date) : "—"}
-                  {viewing?.event_time
-                    ? ` • ${formatTimeLabel(viewing.event_time)}`
-                    : ""}
-                </span>
-                {viewing?.location_name ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="opacity-60">•</span>
-                    <MapPin className="h-4 w-4" />
-                    <span>{viewing.location_name}</span>
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  {viewing?.rsvpCount ?? 0}
-                  {typeof viewing?.max_attendees === "number"
-                    ? `/${viewing.max_attendees}`
-                    : ""}{" "}
-                  attending
-                </span>
-              </div>
-            </div>
-
-            {viewing?.description ? (
-              <div className="text-sm leading-relaxed">{viewing.description}</div>
-            ) : (
-              <div className="text-sm text-muted-foreground">No description.</div>
-            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 px-6 pb-6">
             <Button variant="outline" onClick={() => setViewOpen(false)}>
               Close
             </Button>
@@ -372,11 +488,16 @@ export function EventsClient({ events }: { events: EventRow[] }) {
               onClick={() => {
                 if (!viewing) return
                 setEditing(viewing)
+                setViewRsvps(null)
+                setRsvpsAllOpen(false)
                 setEditForm({
                   title: viewing.title ?? "",
                   event_date: viewing.event_date ?? "",
                   event_time: viewing.event_time
                     ? normalizeTimeForSelect(viewing.event_time)
+                    : "",
+                  end_time: viewing.end_time
+                    ? normalizeTimeForSelect(viewing.end_time)
                     : "",
                   location_name: viewing.location_name ?? "",
                   description: viewing.description ?? "",
@@ -396,75 +517,62 @@ export function EventsClient({ events }: { events: EventRow[] }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+      <Dialog open={rsvpsAllOpen} onOpenChange={setRsvpsAllOpen}>
+        <DialogContent className="w-[560px] max-h-[85vh] flex flex-col">
           <DialogHeader>
+            <DialogTitle>Attendees</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto min-h-0 -mx-6 px-6">
+            {viewRsvps === null ? (
+              <ul className="space-y-2 py-1" aria-busy="true" aria-label="Loading attendees">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-3 rounded-lg border border-transparent bg-card px-3 py-2"
+                  >
+                    <Skeleton className="size-9 shrink-0 rounded-full" />
+                    <Skeleton className="h-4 w-32" />
+                  </li>
+                ))}
+              </ul>
+            ) : viewRsvps.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">
+                No one has RSVPed yet.
+              </p>
+            ) : (
+              <ul className="space-y-2 py-1">
+                {viewRsvps.map((rsvp) => (
+                  <li
+                    key={rsvp.id}
+                    className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2"
+                  >
+                    <Avatar className="size-9 shrink-0">
+                      <AvatarImage
+                        src={rsvp.avatar_url ?? undefined}
+                        alt={rsvp.name ?? undefined}
+                      />
+                      <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+                        {initials(rsvp.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium truncate">
+                      {rsvp.name?.trim() || "Guest"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-[600px] h-[85vh] max-h-[85vh] overflow-hidden grid !grid-rows-[auto_minmax(0,1fr)_auto]">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Edit event</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-title">Title</Label>
-              <Input
-                id="edit-title"
-                value={editForm.title}
-                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !editForm.event_date && "text-muted-foreground",
-                      )}
-                    >
-                      {editForm.event_date
-                        ? formatDate(editForm.event_date)
-                        : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateFromIso(editForm.event_date)}
-                      onSelect={(d) => {
-                        if (!d) return
-                        setEditForm((f) => ({ ...f, event_date: isoFromDate(d) }))
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="grid gap-2">
-                <Label>Time</Label>
-                <Select
-                  value={editForm.event_time}
-                  onValueChange={(v) =>
-                    setEditForm((f) => ({ ...f, event_time: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[320px]">
-                    {times.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+          <div className="grid gap-4 overflow-y-auto overflow-x-hidden -mx-6 px-6 min-h-0">
             <div className="grid gap-2">
               <Label>Event image (16:9)</Label>
               <div className="relative">
@@ -507,6 +615,105 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !editForm.event_date && "text-muted-foreground",
+                      )}
+                    >
+                      {editForm.event_date
+                        ? formatDate(editForm.event_date)
+                        : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFromIso(editForm.event_date)}
+                      onSelect={(d) => {
+                        if (!d) return
+                        setEditForm((f) => ({ ...f, event_date: isoFromDate(d) }))
+                      }}
+                      disabled={(date) =>
+                        isBefore(startOfDay(date), startOfDay(new Date()))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid gap-2">
+                <Label>Time</Label>
+                <Select
+                  value={
+                    editStartTimeOptions.some((t) => t.value === editForm.event_time)
+                      ? editForm.event_time
+                      : ""
+                  }
+                  onValueChange={(v) =>
+                    setEditForm((f) => ({ ...f, event_time: v }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[320px]">
+                    {editStartTimeOptions.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>End time</Label>
+              <Select
+                value={
+                  editForm.end_time &&
+                  editEndTimeOptions.some((t) => t.value === editForm.end_time)
+                    ? editForm.end_time
+                    : "_none"
+                }
+                onValueChange={(v) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    end_time: v === "_none" ? "" : v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  <SelectItem value="_none">No end time</SelectItem>
+                  {editEndTimeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
@@ -566,7 +773,7 @@ export function EventsClient({ events }: { events: EventRow[] }) {
             ) : null}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Close
             </Button>
@@ -586,6 +793,7 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                   fd.set("title", editForm.title.trim())
                   fd.set("event_date", editForm.event_date)
                   fd.set("event_time", editForm.event_time)
+                  fd.set("end_time", editForm.end_time.trim())
                   fd.set("location_name", editForm.location_name.trim())
                   fd.set("description", editForm.description.trim())
                   fd.set("status", editForm.status)

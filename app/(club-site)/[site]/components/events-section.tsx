@@ -1,86 +1,137 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, MapPin, Users } from "lucide-react";
 
 import type { ClubEvent } from "../mock-data";
 
+function formatDateLong(eventDateIso: string | null): string {
+  if (!eventDateIso) return "";
+  const d = new Date(`${eventDateIso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function EventsSection({ events }: { events: ClubEvent[] }) {
+  const displayEvents = events.slice(0, 3);
+
+  if (displayEvents.length === 0) return null;
+
   return (
-    <section className="bg-muted/20">
-      <div className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="size-4" />
-              Upcoming events
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              See what&apos;s next
-            </h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Weekly runs are open to all. Bring a friend, choose your pace, and
-              hang after.
-            </p>
-          </div>
+    <section id="events" className="relative bg-white py-20">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        <h2 className="mb-16 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+          Upcoming Events
+        </h2>
 
-          <Button asChild variant="outline">
-            <Link href="./events">All events</Link>
-          </Button>
-        </div>
+        <div className="space-y-6">
+          {displayEvents.map((event) => {
+            const dateLong = formatDateLong(event.eventDateIso);
+            const timeRange =
+              event.endTime
+                ? `${event.time} – ${event.endTime}`
+                : event.time;
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <Card key={event.title} className="h-full overflow-hidden p-0">
-              {event.imageUrl && (
-                <Link href="./events" className="block">
-                  <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                    <Image
-                      src={event.imageUrl}
-                      alt={event.title}
-                      fill
-                      className="object-cover transition-transform hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
+            return (
+              <div
+                key={event.id}
+                className="overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:border-gray-300"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-stretch">
+                  {/* Image Section - matches reference lg:w-2/5 xl:w-1/3, aspect-video */}
+                  <div className="w-full shrink-0 lg:w-2/5 xl:w-1/3">
+                    {event.imageUrl ? (
+                      <Link href={`./events/${event.id}`} className="relative block aspect-video w-full">
+                        <Image
+                          src={event.imageUrl}
+                          alt={event.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 1024px) 100vw, 40vw"
+                        />
+                      </Link>
+                    ) : (
+                      <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                        <Calendar className="size-12 text-gray-300" />
+                      </div>
+                    )}
                   </div>
-                </Link>
-              )}
-              <CardHeader className="space-y-2 pb-3">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{event.dateLabel}</Badge>
-                  <Badge>{event.runType}</Badge>
-                </div>
-                <CardTitle className="text-base">{event.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="space-y-1.5 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Clock className="size-4" />
-                    <span>{event.time}{event.endTime && ` – ${event.endTime}`}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="size-4" />
-                    <span>{event.location}</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    Meet 10 min early
+                  {/* Content Section - tight padding so no gap from image; button fixed top-right */}
+                  <div className="relative flex flex-1 flex-col py-4 pl-5 pr-28 lg:py-5 lg:pl-6 lg:pr-32">
+                    {/* RSVP button - fixed top-right, independent of content flow */}
+                    <div className="absolute top-4 right-5 lg:top-5 lg:right-6">
+                      <Button
+                        asChild
+                        className="h-auto rounded-none px-8 py-2.5 text-sm font-medium shadow-sm transition-all duration-300 hover:shadow-md"
+                      >
+                        <Link href={`./events/${event.id}`}>RSVP</Link>
+                      </Button>
+                    </div>
+
+                    {/* Time + Date - minimal gap to title */}
+                    <div>
+                      {timeRange && timeRange !== "TBD" && (
+                        <div className="text-xs font-medium text-gray-500">
+                          {timeRange}
+                        </div>
+                      )}
+                      {dateLong && (
+                        <div className="text-sm font-medium text-gray-900">
+                          {dateLong}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Title - tight to time/date */}
+                    <h3 className="mb-2 mt-0.5 text-xl font-bold leading-tight text-gray-900 sm:text-2xl">
+                      <Link
+                        href={`./events/${event.id}`}
+                        className="hover:underline"
+                      >
+                        {event.title}
+                      </Link>
+                    </h3>
+
+                    {/* Location + Attendees */}
+                    {(event.location || event.max_attendees != null) && (
+                      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {event.location && event.location !== "TBD" && (
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="mr-1.5 size-4 shrink-0 text-gray-400" />
+                            <span className="text-sm">{event.location}</span>
+                          </div>
+                        )}
+                        {typeof event.max_attendees === "number" && (
+                          <div className="flex items-center text-gray-600">
+                            <Users className="mr-1.5 size-4 shrink-0 text-gray-400" />
+                            <span className="text-sm">
+                              {event.rsvpCount ?? 0}/{event.max_attendees} attending
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {event.description && (
+                      <p className="line-clamp-3 text-sm leading-relaxed text-gray-600 mt-0">
+                        {event.description}
+                      </p>
+                    )}
                   </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="./events">Details</Link>
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
-

@@ -40,7 +40,7 @@ export default async function ClubTenantLayout({
           `
         }} />
       )}
-      <div className="min-h-dvh bg-background text-foreground">
+      <div className="relative min-h-dvh bg-background text-foreground">
         <ClubNavbar 
           site={site} 
           clubName={(club.name ?? "").toString()} 

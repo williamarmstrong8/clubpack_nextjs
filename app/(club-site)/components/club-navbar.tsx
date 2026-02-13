@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Menu, Settings, LogOut } from "lucide-react";
+import { signout } from "../(auth)/[site]/actions/auth";
 
 type NavItem = {
   label: string;
-  href: (site: string) => string;
+  href: string;
 };
 
 function titleCaseFromSlug(slug: string) {
@@ -66,27 +67,27 @@ export function ClubNavbar({
   const initials = initialsFromName(clubName);
 
   // Determine if we're on a page where navbar should be dark
-  const isOnContentPage = pathname?.includes('/events') || pathname?.includes('/about') || pathname?.includes('/contact');
+  const isOnContentPage = pathname?.includes("/events") || pathname?.includes("/about") || pathname?.includes("/contact");
   const textColor = isOnContentPage ? 'text-foreground' : 'text-white';
 
   const navItems: NavItem[] = useMemo(
     () => [
-      { label: "Events", href: (s) => `/${s}/events` },
-      { label: "About", href: (s) => `/${s}/about` },
-      { label: "Contact", href: (s) => `/${s}/contact` },
+      { label: "Events", href: "/events" },
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
     ],
     [],
   );
 
-  const joinHref = `/${site}/signup`;
+  const joinHref = "/signup";
 
   return (
-    <header className="fixed top-0 z-50 w-full backdrop-blur-xl bg-background/30">
+    <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Logo + Club Name */}
         <div className="flex items-center gap-3 flex-1">
           <Link
-            href={`/${site}`}
+            href="/"
             className={cn("inline-flex items-center gap-2.5 font-semibold tracking-tight", textColor)}
           >
             {clubLogo ? (
@@ -112,7 +113,7 @@ export function ClubNavbar({
         {/* Center: Navigation Links (absolutely centered) */}
         <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navItems.map((item) => {
-            const href = item.href(site);
+            const href = item.href;
             const active = pathname === href;
             return (
               <Link
@@ -164,32 +165,32 @@ export function ClubNavbar({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={`/${site}/account`} className="cursor-pointer">
+                  <Link href="/account" className="cursor-pointer">
                     <Settings className="mr-2 size-4" />
                     Account Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <form action={`/${site}/actions/auth`} method="post">
-                    <button type="submit" className="flex w-full items-center">
-                      <LogOut className="mr-2 size-4" />
-                      Sign out
-                    </button>
-                  </form>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={async () => { await signout(); }}
+                >
+                  <LogOut className="mr-2 size-4" />
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <>
               <Button asChild variant="ghost" className={cn(
+                "rounded-none",
                 isOnContentPage 
                   ? "text-foreground hover:bg-muted"
                   : "text-white hover:bg-white/10 hover:text-white"
               )}>
-                <Link href={`/${site}/login`}>Log in</Link>
+                <Link href="/login">Log in</Link>
               </Button>
-              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button asChild className="rounded-none bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Link href={joinHref}>Join Club</Link>
               </Button>
             </>
@@ -208,7 +209,7 @@ export function ClubNavbar({
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <Link
-                    href={`/${site}`}
+                    href="/"
                     className="inline-flex items-center gap-2.5 font-semibold tracking-tight"
                   >
                     {clubLogo ? (
@@ -234,7 +235,7 @@ export function ClubNavbar({
               <div className="p-3">
                 <nav className="grid gap-1">
                   {navItems.map((item) => {
-                    const href = item.href(site);
+                    const href = item.href;
                     const active = pathname === href;
                     return (
                       <Link
@@ -264,19 +265,27 @@ export function ClubNavbar({
                       </div>
                     </div>
                     <Button asChild className="w-full" variant="outline">
-                      <Link href={`/${site}/account`}>
+                      <Link href="/account">
                         <Settings className="mr-2 size-4" />
                         Account Settings
                       </Link>
                     </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={async () => { await signout(); }}
+                    >
+                      <LogOut className="mr-2 size-4" />
+                      Sign out
+                    </Button>
                   </div>
                 ) : (
                   <>
-                    <Button asChild className="w-full">
+                    <Button asChild className="w-full rounded-none">
                       <Link href={joinHref}>Join Club</Link>
                     </Button>
-                    <Button asChild className="mt-2 w-full" variant="outline">
-                      <Link href={`/${site}/login`}>Log in</Link>
+                    <Button asChild className="mt-2 w-full rounded-none" variant="outline">
+                      <Link href="/login">Log in</Link>
                     </Button>
                     <p className="mt-3 text-xs text-muted-foreground">
                       Free to join. Weekly community events.

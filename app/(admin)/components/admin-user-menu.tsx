@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LogOut, Settings, UserRound } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -10,8 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
@@ -46,17 +44,6 @@ export function AdminUserMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Account</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => console.log("Open account")}>
-          <UserRound className="mr-2 h-4 w-4" />
-          Account
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => console.log("Open settings")}>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
           onSelect={async (e) => {

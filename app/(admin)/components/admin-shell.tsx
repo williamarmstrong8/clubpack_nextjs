@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { Separator } from "@/components/ui/separator"
@@ -30,15 +31,20 @@ function getAdminTitle(pathname: string) {
   return "Admin"
 }
 
+const FREE_PLAN_MEMBER_LIMIT = 50
+
 export function AdminShell({
   children,
   user,
+  memberCount = 0,
 }: {
   children: React.ReactNode
   user?: { name: string; role: string }
+  memberCount?: number
 }) {
   const pathname = usePathname()
   const title = getAdminTitle(pathname)
+  const overLimit = memberCount > FREE_PLAN_MEMBER_LIMIT
 
   return (
     <SidebarProvider defaultOpen>
@@ -47,6 +53,19 @@ export function AdminShell({
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
+        {overLimit && (
+          <div className="bg-destructive flex items-center justify-center gap-2 rounded-t-lg px-4 py-2 text-center text-sm font-medium text-white">
+            <span>
+              You have exceeded the club member limit. Upgrade to the Growth plan to keep using Clubpack.
+            </span>
+            <Link
+              href="/billing"
+              className="text-white underline underline-offset-2 hover:no-underline"
+            >
+              Upgrade
+            </Link>
+          </div>
+        )}
         <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 flex h-14 items-center gap-2 border-b px-4 backdrop-blur">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />

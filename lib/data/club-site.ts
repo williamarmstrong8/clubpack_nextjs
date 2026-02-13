@@ -30,6 +30,8 @@ export type EventRow = {
   event_time: string | null
   end_time?: string | null
   location_name?: string | null
+  latitude?: number | null
+  longitude?: number | null
   status?: string | null
   max_attendees?: number | null
   [key: string]: unknown

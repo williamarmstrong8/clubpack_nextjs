@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -21,8 +20,6 @@ export default async function AboutPage({
     (typeof club.name === "string" && club.name.trim()) ||
     (typeof club.hero_headline === "string" && club.hero_headline.trim()) ||
     site;
-  const location =
-    (typeof club.location === "string" && club.location.trim()) || "Local";
   const mission =
     (typeof club.description === "string" && club.description.trim()) ||
     (typeof club.hero_subtext === "string" && club.hero_subtext.trim()) ||
@@ -31,13 +28,7 @@ export default async function AboutPage({
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-16 sm:px-6 lg:px-8">
-      <div className="max-w-3xl space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{location}</Badge>
-          <Badge>All paces</Badge>
-          <Badge variant="outline">Weekly runs</Badge>
-        </div>
-
+      <div className="mx-auto max-w-3xl space-y-4 text-center">
         <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
           About {name}
         </h1>
@@ -46,9 +37,9 @@ export default async function AboutPage({
           {mission}
         </p>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
           <Button asChild>
-            <Link href="../#join">Join club</Link>
+            <Link href="../signup">Join club</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="../events">See events</Link>
@@ -71,7 +62,7 @@ export default async function AboutPage({
           <CardHeader>
             <CardTitle className="text-base">Clear logistics</CardTitle>
             <CardDescription>
-              Simple routes, obvious meeting points, and helpful reminders.
+              Straightforward plans, clear times and places, and helpful updates.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -79,51 +70,10 @@ export default async function AboutPage({
           <CardHeader>
             <CardTitle className="text-base">Better together</CardTitle>
             <CardDescription>
-              Whether it&apos;s your first mile or your fiftieth, you belong here.
+              Whether you&apos;re new or a regular, you belong here.
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
-
-      <div className="mt-10 grid gap-10 lg:grid-cols-2">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Our story</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Happy Mile started as a small group text: “Easy 3 at sunrise?” A few
-            weeks later, the run became a ritual — the kind that makes your whole
-            week feel lighter.
-          </p>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Today, we keep the same promise: no complicated rules, no pressure,
-            and no one left behind. We regroup often, celebrate small wins, and
-            usually end with coffee.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">What to expect</h2>
-          <div className="grid gap-3">
-            <div className="rounded-xl border bg-muted/30 p-4">
-              <div className="font-medium">Arrive early</div>
-              <div className="text-sm text-muted-foreground">
-                We start on time. Aim for 10 minutes early to say hi.
-              </div>
-            </div>
-            <div className="rounded-xl border bg-muted/30 p-4">
-              <div className="font-medium">Choose your pace</div>
-              <div className="text-sm text-muted-foreground">
-                Run, jog, walk — it&apos;s all movement. We regroup often.
-              </div>
-            </div>
-            <div className="rounded-xl border bg-muted/30 p-4">
-              <div className="font-medium">Stay after</div>
-              <div className="text-sm text-muted-foreground">
-                Optional, but highly recommended: coffee, snacks, and good
-                conversations.
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

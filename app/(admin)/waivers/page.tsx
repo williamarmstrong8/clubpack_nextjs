@@ -8,8 +8,6 @@ type WaiverSettingsRow = {
   is_enabled: boolean | null
   waiver_url: string | null
   require_photo: boolean | null
-  require_name: boolean | null
-  require_email: boolean | null
   require_rsvp: boolean | null
 }
 
@@ -43,7 +41,7 @@ export default async function WaiversPage() {
   const [settingsRes, submissionsRes] = await Promise.all([
     supabase
       .from("waiver_settings")
-      .select("is_enabled, waiver_url, require_photo, require_name, require_email, require_rsvp")
+      .select("is_enabled, waiver_url, require_photo, require_rsvp")
       .eq("club_id", clubId)
       .maybeSingle(),
     supabase
@@ -63,8 +61,6 @@ export default async function WaiversPage() {
           is_enabled: settings?.is_enabled ?? false,
           waiver_url: settings?.waiver_url ?? null,
           require_photo: settings?.require_photo ?? false,
-          require_name: settings?.require_name ?? false,
-          require_email: settings?.require_email ?? false,
           require_rsvp: settings?.require_rsvp ?? false,
         },
         submissions,

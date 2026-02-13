@@ -44,7 +44,7 @@ export default function PricingPage() {
     },
     {
       name: "PREMIUM",
-      price: "39.99",
+      price: "29.99",
       period: "month",
       features: [
         "Unlimited members",

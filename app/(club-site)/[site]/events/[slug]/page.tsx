@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin } from "lucide-react";
 
+import { EventMapCard } from "@/components/maps/event-map-card";
+import { AddToGoogleCalendar } from "@/components/events/add-to-google-calendar";
 import { getClubBySubdomain, getEventById, getRequireLoginToRsvp, getRsvpsForEvent } from "@/lib/data/club-site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -154,30 +156,57 @@ export default async function EventPage({
 
       {/* Content Grid */}
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p>{event.description ?? "Details coming soon."}</p>
-            <p>
-              Bring water, wear reflective gear if it&apos;s dark, and introduce
-              yourself to the group leader when you arrive.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+              <p>{event.description ?? "Details coming soon."}</p>
+              <p>
+                Bring water, wear reflective gear if it&apos;s dark, and introduce
+                yourself to the group leader when you arrive.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* RSVP Card */}
-        <EventRsvpCard
-          eventId={event.id}
-          clubId={club.id}
-          site={site}
-          rsvps={rsvps}
-          maxAttendees={maxAttendees}
-          requireLoginToRsvp={requireLoginToRsvp}
-          isLoggedIn={!!membership}
-          alreadyRsvped={existingRsvp}
-        />
+        <div className="space-y-4">
+          {/* RSVP Card */}
+          <EventRsvpCard
+            eventId={event.id}
+            clubId={club.id}
+            site={site}
+            rsvps={rsvps}
+            maxAttendees={maxAttendees}
+            requireLoginToRsvp={requireLoginToRsvp}
+            isLoggedIn={!!membership}
+            alreadyRsvped={existingRsvp}
+          />
+
+          {/* Map Card — shown when coordinates exist */}
+          {typeof event.latitude === "number" &&
+            typeof event.longitude === "number" && (
+              <EventMapCard
+                latitude={event.latitude}
+                longitude={event.longitude}
+                locationName={event.location_name}
+              />
+            )}
+
+          {/* Add to Google Calendar */}
+          {event.event_date && (
+            <AddToGoogleCalendar
+              title={event.title ?? "Event"}
+              description={event.description}
+              eventDate={event.event_date}
+              eventTime={event.event_time}
+              endTime={typeof event.end_time === "string" ? event.end_time : null}
+              locationName={event.location_name}
+              className="w-full"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

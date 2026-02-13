@@ -28,7 +28,7 @@ export function LoginForm({ site }: { site: string }) {
       setLoading(false);
     } else {
       // Redirect to club home page after successful login
-      router.push(`/${site}`);
+      router.push("/");
       router.refresh();
     }
   }
@@ -65,7 +65,7 @@ export function LoginForm({ site }: { site: string }) {
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
               <Link
-                href={`/${site}/forgot-password`}
+                href="/forgot-password"
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Forgot password?
@@ -87,13 +87,13 @@ export function LoginForm({ site }: { site: string }) {
 
           <p className="text-center text-sm text-muted-foreground">
             New here?{" "}
-            <Link href={`/${site}/signup`} className="text-foreground underline">
+            <Link href="/signup" className="text-foreground underline">
               Create an account
             </Link>
           </p>
 
           <p className="text-center text-xs text-muted-foreground">
-            <Link href={`/${site}`} className="hover:text-foreground">
+            <Link href="/" className="hover:text-foreground">
               Back to club site
             </Link>
           </p>

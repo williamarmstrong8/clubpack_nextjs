@@ -108,7 +108,7 @@ export function EventRsvpCard({
           <>
             {requireLoginToRsvp && !isLoggedIn ? (
               <Button asChild className="w-full bg-primary hover:bg-primary/90" size="lg">
-                <Link href={`/${site}/login?next=/${site}/events/${eventId}`}>
+                <Link href={`/login?next=/events/${eventId}`}>
                   Sign in to RSVP
                 </Link>
               </Button>
@@ -123,7 +123,7 @@ export function EventRsvpCard({
               </Button>
             ) : (
               <Button asChild className="w-full bg-primary hover:bg-primary/90" size="lg">
-                <Link href={`/${site}/signup?next=/${site}/events/${eventId}`}>
+                <Link href={`/signup?next=/events/${eventId}`}>
                   RSVP for this event
                 </Link>
               </Button>

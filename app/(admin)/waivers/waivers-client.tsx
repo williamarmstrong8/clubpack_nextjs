@@ -35,8 +35,6 @@ export function WaiversClient({
       is_enabled: boolean
       waiver_url: string | null
       require_photo: boolean
-      require_name: boolean
-      require_email: boolean
       require_rsvp: boolean
     }
     submissions: WaiverSubmissionRow[]
@@ -75,8 +73,6 @@ export function WaiversClient({
               await upsertWaiverSettings({
                 is_enabled: settings.is_enabled,
                 require_photo: settings.require_photo,
-                require_name: settings.require_name,
-                require_email: settings.require_email,
                 require_rsvp: settings.require_rsvp,
               })
             })
@@ -121,20 +117,6 @@ export function WaiversClient({
 
             <div className="grid gap-3 rounded-lg border p-3">
               <div className="text-sm font-medium">Required fields</div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Name</span>
-                <Switch
-                  checked={settings.require_name}
-                  onCheckedChange={(v) => setSettings((s) => ({ ...s, require_name: v }))}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Email</span>
-                <Switch
-                  checked={settings.require_email}
-                  onCheckedChange={(v) => setSettings((s) => ({ ...s, require_email: v }))}
-                />
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Photo</span>
                 <Switch

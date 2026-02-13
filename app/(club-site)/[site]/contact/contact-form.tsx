@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { submitContactForm } from "./actions";
 
 export function ContactForm({ site, clubName }: { site: string; clubName: string }) {
   const [loading, setLoading] = useState(false);
@@ -18,19 +19,23 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
     setSuccess(false);
     setLoading(true);
 
-    const formData = new FormData(event.currentTarget);
-    
-    try {
-      // Here you would integrate with your email service (SendGrid, Resend, etc.)
-      // For now, we'll simulate a successful submission
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    const result = await submitContactForm(site, {
+      first_name: String(formData.get("firstName") ?? "").trim(),
+      last_name: String(formData.get("lastName") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      subject: String(formData.get("subject") ?? "").trim(),
+      message: String(formData.get("message") ?? "").trim(),
+    });
+
+    setLoading(false);
+    if (result.ok) {
       setSuccess(true);
-      (event.target as HTMLFormElement).reset();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message");
-    } finally {
-      setLoading(false);
+      form.reset();
+    } else {
+      setError(result.error);
     }
   }
 
@@ -59,7 +64,7 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
               <Input
                 id="firstName"
                 name="firstName"
-                placeholder="William"
+                placeholder="First name"
                 required
                 disabled={loading}
               />
@@ -69,7 +74,7 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
               <Input
                 id="lastName"
                 name="lastName"
-                placeholder="Armstrong"
+                placeholder="Last name"
                 required
                 disabled={loading}
               />
@@ -82,7 +87,7 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
               id="email"
               name="email"
               type="email"
-              placeholder="you@domain.com"
+              placeholder="you@example.com"
               required
               disabled={loading}
             />
@@ -93,7 +98,7 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
             <Input
               id="subject"
               name="subject"
-              placeholder="What's this about?"
+              placeholder="e.g. Question about membership, event, or general inquiry"
               required
               disabled={loading}
             />
@@ -104,7 +109,7 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
             <Textarea
               id="message"
               name="message"
-              placeholder={`Tell us what you'd like to know about ${clubName}...`}
+              placeholder="Type your message here..."
               rows={6}
               required
               disabled={loading}

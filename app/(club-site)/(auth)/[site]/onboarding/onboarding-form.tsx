@@ -42,7 +42,7 @@ export function OnboardingForm({ site, user }: { site: string; user: User }) {
       }
 
       // Redirect to club home page after successful onboarding
-      router.push(`/${site}`);
+      router.push("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -141,7 +141,7 @@ export function OnboardingForm({ site, user }: { site: string; user: User }) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push(`/${site}`)}
+              onClick={() => router.push("/")}
               disabled={loading}
             >
               Skip for now

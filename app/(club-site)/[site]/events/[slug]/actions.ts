@@ -65,7 +65,7 @@ export async function rsvpForEvent(eventId: string, clubId: string, site: string
 
   if (insertError) return { ok: false, error: insertError.message }
 
-  revalidatePath(`/${site}/events/${eventId}`)
-  revalidatePath(`/${site}/events`)
+  revalidatePath(`/events/${eventId}`)
+  revalidatePath("/events")
   return { ok: true }
 }

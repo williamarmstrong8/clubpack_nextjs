@@ -54,6 +54,17 @@ function formatEventDateLabel(isoDate: string | null) {
   })
 }
 
+function formatEventDateFull(isoDate: string | null) {
+  if (!isoDate) return ""
+  const d = new Date(`${isoDate}T00:00:00`)
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
 function formatEventTime(t: string | null) {
   const time = (t ?? "").trim()
   if (!time) return "TBD"
@@ -72,19 +83,23 @@ function formatEventTime(t: string | null) {
 }
 
 function toClubEvent(e: EventRow): ClubEvent {
-  const imageUrl = 
+  const imageUrl =
     (typeof e.image_url === "string" && e.image_url) ||
     (typeof e.event_image === "string" && e.event_image) ||
-    null;
-    
+    null
+
   return {
+    id: e.id,
     title: e.title ?? "Untitled",
     dateLabel: formatEventDateLabel(e.event_date),
+    eventDateIso: e.event_date ?? null,
     time: formatEventTime(e.event_time),
     endTime: e.end_time ? formatEventTime(e.end_time) : undefined,
     location: e.location_name ?? "TBD",
     runType: "Run",
     imageUrl: imageUrl || "/club-photos/happy-group.webp",
+    description: e.description ?? null,
+    max_attendees: typeof e.max_attendees === "number" ? e.max_attendees : null,
   }
 }
 

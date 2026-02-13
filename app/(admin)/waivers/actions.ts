@@ -8,8 +8,6 @@ import { createClient } from "@/lib/supabase/server"
 export async function upsertWaiverSettings(input: {
   is_enabled: boolean
   require_photo: boolean
-  require_name: boolean
-  require_email: boolean
   require_rsvp: boolean
 }) {
   const { profile } = await getAdminContext()
@@ -23,8 +21,9 @@ export async function upsertWaiverSettings(input: {
         club_id: profile.club_id,
         is_enabled: input.is_enabled,
         require_photo: input.require_photo,
-        require_name: input.require_name,
-        require_email: input.require_email,
+        // Name/email toggles removed from UI; keep these disabled.
+        require_name: false,
+        require_email: false,
         require_rsvp: input.require_rsvp,
       },
       { onConflict: "club_id" },

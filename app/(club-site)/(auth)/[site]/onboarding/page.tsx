@@ -11,7 +11,7 @@ export default async function OnboardingPage({
   const user = await getUser();
 
   if (!user) {
-    redirect(`/${site}/login`);
+    redirect("/login");
   }
 
   return (

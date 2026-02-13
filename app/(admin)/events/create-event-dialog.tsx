@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isBefore, startOfDay } from "date-fns"
 import { Calendar as CalendarIcon, ImagePlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 
 import { cn } from "@/lib/utils"
+import { LocationSearch, type LocationSelection } from "@/components/maps/location-search"
 import { createEvent } from "./actions"
 
 function isoFromDate(d: Date) {
@@ -51,6 +52,36 @@ function timeOptions(stepMinutes = 15) {
     times.push({ value, label })
   }
   return times
+}
+
+function timeToMinutes(value: string) {
+  const [h, m] = value.split(":").map(Number)
+  return h * 60 + (m ?? 0)
+}
+
+/** Filter time options to only future times for the selected date; optionally after a start time (for end time). */
+function filterFutureTimes(
+  times: Array<{ value: string; label: string }>,
+  eventDateIso: string,
+  options?: { afterTimeValue?: string; forEndTime?: boolean }
+): Array<{ value: string; label: string }> {
+  if (!eventDateIso) return times
+  const selected = dateFromIso(eventDateIso)
+  if (!selected) return times
+  const today = startOfDay(new Date())
+  const selectedDay = startOfDay(selected)
+  const isToday =
+    selectedDay.getTime() === today.getTime()
+  const now = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const roundUpMins = Math.ceil(nowMins / 15) * 15
+  let minMins = 0
+  if (isToday) minMins = roundUpMins
+  if (options?.afterTimeValue) {
+    const afterMins = timeToMinutes(options.afterTimeValue)
+    minMins = Math.max(minMins, options.forEndTime ? afterMins + 15 : afterMins)
+  }
+  return times.filter((t) => timeToMinutes(t.value) >= minMins)
 }
 
 export type CreateEventPrefill = {
@@ -88,7 +119,10 @@ export function CreateEventDialog({
       title: prefill?.title ?? "",
       event_date: "",
       event_time: "",
+      end_time: "",
       location_name: prefill?.location_name ?? "",
+      latitude: null as number | null,
+      longitude: null as number | null,
       description: prefill?.description ?? "",
       hasCapacity: false,
       max_attendees: 50,
@@ -105,7 +139,10 @@ export function CreateEventDialog({
         title: prefill?.title ?? "",
         event_date: "",
         event_time: "",
+        end_time: "",
         location_name: prefill?.location_name ?? "",
+        latitude: null,
+        longitude: null,
         description: prefill?.description ?? "",
         hasCapacity: false,
         max_attendees: 50,
@@ -124,6 +161,18 @@ export function CreateEventDialog({
   }, [coverPreview])
 
   const times = React.useMemo(() => timeOptions(15), [])
+  const startTimeOptions = React.useMemo(
+    () => filterFutureTimes(times, form.event_date),
+    [times, form.event_date],
+  )
+  const endTimeOptions = React.useMemo(
+    () =>
+      filterFutureTimes(times, form.event_date, {
+        afterTimeValue: form.event_time || undefined,
+        forEndTime: true,
+      }),
+    [times, form.event_date, form.event_time],
+  )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -134,84 +183,6 @@ export function CreateEventDialog({
         </DialogHeader>
 
         <div className="grid gap-4 overflow-y-auto overflow-x-hidden -mx-6 px-6 min-h-0">
-          <div className="grid gap-2">
-            <Label htmlFor="create-title">Title</Label>
-            <Input
-              id="create-title"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Sunday Run + Coffee"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !form.event_date && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.event_date
-                      ? format(
-                          new Date(`${form.event_date}T00:00:00`),
-                          "MMM d, yyyy",
-                        )
-                      : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFromIso(form.event_date)}
-                    onSelect={(d) => {
-                      if (!d) return
-                      setForm((f) => ({ ...f, event_date: isoFromDate(d) }))
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Time</Label>
-              <Select
-                value={form.event_time}
-                onValueChange={(v) => setForm((f) => ({ ...f, event_time: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[320px]">
-                  {times.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="create-location">Location</Label>
-            <Input
-              id="create-location"
-              value={form.location_name}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, location_name: e.target.value }))
-              }
-              placeholder="Central Park"
-            />
-          </div>
-
           <div className="grid gap-2">
             <Label>Event image (16:9)</Label>
             <div className="relative">
@@ -254,6 +225,121 @@ export function CreateEventDialog({
                 )}
               </button>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="create-title">Title</Label>
+            <Input
+              id="create-title"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Sunday Run + Coffee"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !form.event_date && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.event_date
+                      ? format(
+                          new Date(`${form.event_date}T00:00:00`),
+                          "MMM d, yyyy",
+                        )
+                      : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromIso(form.event_date)}
+                    onSelect={(d) => {
+                      if (!d) return
+                      setForm((f) => ({ ...f, event_date: isoFromDate(d) }))
+                    }}
+                    disabled={(date) =>
+                      isBefore(startOfDay(date), startOfDay(new Date()))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Time</Label>
+              <Select
+                value={
+                  startTimeOptions.some((t) => t.value === form.event_time)
+                    ? form.event_time
+                    : ""
+                }
+                onValueChange={(v) => setForm((f) => ({ ...f, event_time: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {startTimeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>End time</Label>
+            <Select
+              value={
+                form.end_time && endTimeOptions.some((t) => t.value === form.end_time)
+                  ? form.end_time
+                  : "_none"
+              }
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, end_time: v === "_none" ? "" : v }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Optional" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[320px]">
+                <SelectItem value="_none">No end time</SelectItem>
+                {endTimeOptions.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Location</Label>
+            <LocationSearch
+              value={form.location_name}
+              onSelect={(sel: LocationSelection) =>
+                setForm((f) => ({
+                  ...f,
+                  location_name: sel.location_name,
+                  latitude: sel.latitude,
+                  longitude: sel.longitude,
+                }))
+              }
+              placeholder="Search address or place"
+            />
           </div>
 
           <div className="grid gap-2">
@@ -321,7 +407,10 @@ export function CreateEventDialog({
                 fd.set("title", form.title.trim())
                 fd.set("event_date", form.event_date)
                 fd.set("event_time", form.event_time)
+                fd.set("end_time", form.end_time.trim())
                 fd.set("location_name", form.location_name.trim())
+                fd.set("latitude", form.latitude != null ? String(form.latitude) : "")
+                fd.set("longitude", form.longitude != null ? String(form.longitude) : "")
                 fd.set("description", form.description.trim())
                 fd.set(
                   "max_attendees",
@@ -335,7 +424,10 @@ export function CreateEventDialog({
                   title: "",
                   event_date: "",
                   event_time: "",
+                  end_time: "",
                   location_name: "",
+                  latitude: null,
+                  longitude: null,
                   description: "",
                   hasCapacity: true,
                   max_attendees: 50,

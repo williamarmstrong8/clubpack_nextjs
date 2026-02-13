@@ -38,7 +38,7 @@ export function SignupForm({ site }: { site: string }) {
       setLoading(false);
     } else {
       // Redirect to onboarding page after successful signup
-      router.push(`/${site}/onboarding`);
+      router.push("/onboarding");
       router.refresh();
     }
   }
@@ -117,13 +117,13 @@ export function SignupForm({ site }: { site: string }) {
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href={`/${site}/login`} className="text-foreground underline">
+            <Link href="/login" className="text-foreground underline">
               Log in
             </Link>
           </p>
 
           <p className="text-center text-xs text-muted-foreground">
-            <Link href={`/${site}`} className="hover:text-foreground">
+            <Link href="/" className="hover:text-foreground">
               Back to club site
             </Link>
           </p>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getAdminContext } from "@/lib/admin/get-admin-context"
+import { getRsvpsForEvent } from "@/lib/data/club-site"
 
 function fileExt(name: string) {
   const ext = name.split(".").pop()
@@ -40,10 +41,16 @@ export async function createEvent(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const event_date = String(formData.get("event_date") ?? "")
   const event_time = String(formData.get("event_time") ?? "")
+  const end_time = String(formData.get("end_time") ?? "").trim() || null
   const location_name = String(formData.get("location_name") ?? "")
   const description = String(formData.get("description") ?? "")
   const maxAttendeesRaw = String(formData.get("max_attendees") ?? "")
   const cover = formData.get("cover_image")
+
+  const latRaw = String(formData.get("latitude") ?? "")
+  const lngRaw = String(formData.get("longitude") ?? "")
+  const latitude = latRaw && !Number.isNaN(Number(latRaw)) ? Number(latRaw) : null
+  const longitude = lngRaw && !Number.isNaN(Number(lngRaw)) ? Number(lngRaw) : null
 
   const max_attendees =
     maxAttendeesRaw && !Number.isNaN(Number(maxAttendeesRaw))
@@ -59,7 +66,10 @@ export async function createEvent(formData: FormData) {
       description,
       event_date,
       event_time,
+      end_time,
       location_name,
+      latitude,
+      longitude,
       max_attendees,
       created_by: userId,
       status: "active",
@@ -96,11 +106,17 @@ export async function updateEvent(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const event_date = String(formData.get("event_date") ?? "")
   const event_time = String(formData.get("event_time") ?? "")
+  const end_time = String(formData.get("end_time") ?? "").trim() || null
   const location_name = String(formData.get("location_name") ?? "")
   const description = String(formData.get("description") ?? "")
   const status = String(formData.get("status") ?? "active")
   const maxAttendeesRaw = String(formData.get("max_attendees") ?? "")
   const cover = formData.get("cover_image")
+
+  const latRaw = String(formData.get("latitude") ?? "")
+  const lngRaw = String(formData.get("longitude") ?? "")
+  const latitude = latRaw && !Number.isNaN(Number(latRaw)) ? Number(latRaw) : null
+  const longitude = lngRaw && !Number.isNaN(Number(lngRaw)) ? Number(lngRaw) : null
 
   const max_attendees =
     maxAttendeesRaw && !Number.isNaN(Number(maxAttendeesRaw))
@@ -113,7 +129,10 @@ export async function updateEvent(formData: FormData) {
     description,
     event_date,
     event_time,
+    end_time,
     location_name,
+    latitude,
+    longitude,
     max_attendees,
     status,
   }
@@ -136,5 +155,17 @@ export async function updateEvent(formData: FormData) {
 
   if (error) throw new Error(error.message)
   revalidatePath("/events")
+}
+
+export type EventRsvpForView = {
+  id: string
+  name: string | null
+  avatar_url: string | null
+}
+
+export async function getEventRsvps(eventId: string): Promise<EventRsvpForView[]> {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return []
+  return getRsvpsForEvent(profile.club_id, eventId)
 }
 

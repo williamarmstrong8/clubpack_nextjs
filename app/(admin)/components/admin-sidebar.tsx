@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -103,10 +104,16 @@ export function AdminSidebar() {
       <SidebarHeader className="py-3">
         <Link
           href="/home"
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-semibold"
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-semibold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            CP
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center min-h-8 min-w-8">
+            <Image
+              src="/clubpack-logos/clubpack-logo-small.svg"
+              alt="ClubPack"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+            />
           </div>
           <span className="truncate group-data-[collapsible=icon]:hidden">
             ClubPack Admin

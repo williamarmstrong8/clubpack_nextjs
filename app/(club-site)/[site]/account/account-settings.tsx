@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, FileText, Check } from "lucide-react";
+import { Upload, FileText, Check, User as UserIcon } from "lucide-react";
 import { signout } from "../../(auth)/[site]/actions/auth";
 
 type Member = {
@@ -22,25 +22,46 @@ type Member = {
   bio: string | null;
   city: string | null;
   state: string | null;
+  photo_url: string | null;
   waiver_url: string | null;
   waiver_signed_at: string | null;
 } | null;
 
 export function AccountSettings({
   site,
+  clubId,
   user,
   member,
+  waiversEnabled = false,
+  requirePhoto = false,
 }: {
   site: string;
+  clubId: string | null;
   user: User;
   member: Member;
+  waiversEnabled?: boolean;
+  requirePhoto?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [waiverFile, setWaiverFile] = useState<File | null>(null);
-  const [uploadingWaiver, setUploadingWaiver] = useState(false);
+  const [firstName, setFirstName] = useState(member?.first_name ?? "");
+  const [lastName, setLastName] = useState(member?.last_name ?? "");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadingSubmission, setUploadingSubmission] = useState(false);
+
+  useEffect(() => {
+    setFirstName(member?.first_name ?? "");
+    setLastName(member?.last_name ?? "");
+  }, [member?.first_name, member?.last_name]);
+
+  const canSubmit = useMemo(() => {
+    const photoOk = !requirePhoto || !!member?.photo_url;
+    const waiverOk = !waiversEnabled || !!member?.waiver_url;
+    return photoOk && waiverOk;
+  }, [requirePhoto, waiversEnabled, member?.photo_url, member?.waiver_url]);
 
   async function handleProfileUpdate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,19 +71,27 @@ export function AccountSettings({
 
     const formData = new FormData(event.currentTarget);
     const supabase = createClient();
+    const first = (formData.get("firstName") as string)?.trim() ?? "";
+    const last = (formData.get("lastName") as string)?.trim() ?? "";
 
     try {
+      if (requirePhoto && !member?.photo_url) {
+        throw new Error("Profile photo is required.");
+      }
+      if (waiversEnabled && !member?.waiver_url) {
+        throw new Error("Waiver upload is required.");
+      }
+
       const updates = {
-        first_name: formData.get("firstName") as string,
-        last_name: formData.get("lastName") as string,
-        phone: formData.get("phone") as string,
-        bio: formData.get("bio") as string,
-        city: formData.get("city") as string,
-        state: formData.get("state") as string,
+        first_name: first,
+        last_name: last,
+        phone: (formData.get("phone") as string) ?? "",
+        bio: (formData.get("bio") as string) ?? "",
+        city: (formData.get("city") as string) ?? "",
+        state: (formData.get("state") as string) ?? "",
       };
 
       if (member) {
-        // Update existing member
         const { error: updateError } = await supabase
           .from("members")
           .update(updates)
@@ -70,7 +99,6 @@ export function AccountSettings({
 
         if (updateError) throw updateError;
       } else {
-        // Create new member profile
         const { error: insertError } = await supabase.from("members").insert({
           user_id: user.id,
           email: user.email,
@@ -89,50 +117,108 @@ export function AccountSettings({
     }
   }
 
-  async function handleWaiverUpload() {
-    if (!waiverFile) return;
-
+  async function handleSubmissionUpload() {
     setError(null);
     setSuccess(null);
-    setUploadingWaiver(true);
+    setUploadingSubmission(true);
 
     const supabase = createClient();
 
     try {
-      // Upload file to Supabase Storage
-      const fileExt = waiverFile.name.split(".").pop();
-      const fileName = `${user.id}-waiver-${Date.now()}.${fileExt}`;
-      const filePath = `waivers/${fileName}`;
+      if (!clubId) throw new Error("Missing club context.");
 
-      const { error: uploadError } = await supabase.storage
-        .from("club-documents")
-        .upload(filePath, waiverFile);
+      const needsPhoto = requirePhoto && !member?.photo_url;
+      const needsWaiver = waiversEnabled && !member?.waiver_url;
 
-      if (uploadError) throw uploadError;
+      // If required and missing, we must have a file selected for that item.
+      if (needsPhoto && !photoFile) throw new Error("Please add a profile photo to upload.");
+      if (needsWaiver && !waiverFile) throw new Error("Please add a waiver file to upload.");
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("club-documents").getPublicUrl(filePath);
+      // Upload any newly-selected files (also used for replacements).
+      let photoUrl: string | null = null;
+      let waiverUrl: string | null = null;
+      let waiverSignedAt: string | null = null;
 
-      // Update member record with waiver URL
-      const { error: updateError } = await supabase
-        .from("members")
-        .update({
-          waiver_url: publicUrl,
-          waiver_signed_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
+      if (photoFile) {
+        const fileExt = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+        const fileName = `${user.id}-photo-${Date.now()}.${fileExt}`;
+        const filePath = `${clubId}/photos/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("waiver-submissions")
+          .upload(filePath, photoFile, {
+            upsert: true,
+            contentType: photoFile.type,
+          });
+        if (uploadError) throw uploadError;
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("waiver-submissions").getPublicUrl(filePath);
+        photoUrl = publicUrl ?? null;
+      }
 
-      if (updateError) throw updateError;
+      if (waiverFile) {
+        const fileExt = waiverFile.name.split(".").pop() || "pdf";
+        const fileName = `${user.id}-waiver-${Date.now()}.${fileExt}`;
+        const filePath = `${clubId}/waivers/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("waiver-submissions")
+          .upload(filePath, waiverFile, {
+            upsert: true,
+            contentType: waiverFile.type,
+          });
+        if (uploadError) throw uploadError;
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("waiver-submissions").getPublicUrl(filePath);
+        waiverUrl = publicUrl ?? null;
+        waiverSignedAt = new Date().toISOString();
+      }
 
-      setSuccess("Waiver uploaded successfully!");
+      // After uploading, ensure required items are satisfied.
+      const finalPhotoOk = !requirePhoto || !!(member?.photo_url || photoUrl);
+      const finalWaiverOk = !waiversEnabled || !!(member?.waiver_url || waiverUrl);
+      if (!finalPhotoOk || !finalWaiverOk) {
+        throw new Error("Please upload all required items before continuing.");
+      }
+
+      const updatePayload: Record<string, unknown> = {};
+      if (photoUrl) updatePayload.photo_url = photoUrl;
+      if (waiverUrl) updatePayload.waiver_url = waiverUrl;
+      if (waiverSignedAt) updatePayload.waiver_signed_at = waiverSignedAt;
+
+      if (Object.keys(updatePayload).length > 0) {
+        if (member) {
+          const { error: updateError } = await supabase
+            .from("members")
+            .update(updatePayload)
+            .eq("user_id", user.id);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase.from("members").insert({
+            user_id: user.id,
+            email: user.email,
+            first_name: firstName.trim() || null,
+            last_name: lastName.trim() || null,
+            ...updatePayload,
+          });
+          if (insertError) throw insertError;
+        }
+      }
+
+      setSuccess(
+        requirePhoto && waiversEnabled
+          ? "Photo and waiver uploaded successfully!"
+          : requirePhoto
+            ? "Photo uploaded successfully!"
+            : "Waiver uploaded successfully!",
+      );
+      setPhotoFile(null);
       setWaiverFile(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload waiver");
+      setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setUploadingWaiver(false);
+      setUploadingSubmission(false);
     }
   }
 
@@ -165,7 +251,7 @@ export function AccountSettings({
 
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input value={user.email} disabled />
+              <Input value={user.email ?? ""} disabled />
               <p className="text-xs text-muted-foreground">
                 Email cannot be changed. Contact support if needed.
               </p>
@@ -178,7 +264,8 @@ export function AccountSettings({
                   id="firstName"
                   name="firstName"
                   placeholder="William"
-                  defaultValue={member?.first_name ?? ""}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   disabled={loading}
                 />
               </div>
@@ -188,7 +275,8 @@ export function AccountSettings({
                   id="lastName"
                   name="lastName"
                   placeholder="Armstrong"
-                  defaultValue={member?.last_name ?? ""}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   disabled={loading}
                 />
               </div>
@@ -242,86 +330,180 @@ export function AccountSettings({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || !canSubmit}>
                 {loading ? "Saving..." : "Save changes"}
               </Button>
             </div>
+            {!canSubmit && (requirePhoto || waiversEnabled) && (
+              <p className="text-xs text-muted-foreground">
+                Complete all required fields and uploads (marked with *) to save.
+              </p>
+            )}
           </form>
         </CardContent>
       </Card>
 
-      {/* Waiver Upload */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Waiver</CardTitle>
-          <CardDescription>
-            Upload your signed club waiver. Most clubs require a waiver before
-            participating in events.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {member?.waiver_url ? (
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-green-100">
-                  <Check className="size-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">Waiver uploaded</div>
-                  <div className="text-sm text-muted-foreground">
-                    Signed on{" "}
-                    {member.waiver_signed_at
-                      ? new Date(member.waiver_signed_at).toLocaleDateString()
-                      : "Unknown date"}
+      {/* Waiver/photo uploads - conditional on waiver settings */}
+      {(requirePhoto || waiversEnabled) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Waiver submission</CardTitle>
+            <CardDescription>
+              Upload any required items to RSVP and participate in events.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {requirePhoto && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium">Profile photo *</div>
+                {member?.photo_url ? (
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={member.photo_url}
+                        alt="Profile"
+                        className="size-16 rounded-full object-cover"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">Photo uploaded</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={member.waiver_url} target="_blank" rel="noopener noreferrer">
-                    View
-                  </a>
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <FileText className="mx-auto size-10 text-muted-foreground" />
-              <div className="mt-4 text-sm font-medium">No waiver uploaded</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Upload a signed waiver to participate in club events
-              </div>
-            </div>
-          )}
+                ) : null}
 
-          <Separator />
+                <input
+                  id="photo-file"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                  disabled={uploadingSubmission}
+                />
+                <button
+                  type="button"
+                  className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 flex w-full items-center justify-between gap-3 rounded-lg border-2 border-dashed p-4 text-left transition-colors"
+                  onClick={() => document.getElementById("photo-file")?.click()}
+                  disabled={uploadingSubmission}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const f = e.dataTransfer.files?.[0]
+                    if (f) setPhotoFile(f)
+                  }}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      {photoFile ? "Ready to upload" : "Drag & drop a photo"}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {photoFile
+                        ? photoFile.name
+                        : member?.photo_url
+                          ? "Replace your photo"
+                          : "JPG, PNG, or WebP"}
+                    </div>
+                  </div>
+                  <UserIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                </button>
+              </div>
+            )}
 
-          <div className="space-y-3">
-            <Label htmlFor="waiver-file">
-              {member?.waiver_url ? "Upload a new waiver" : "Upload waiver"}
-            </Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="waiver-file"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setWaiverFile(e.target.files?.[0] || null)}
-                disabled={uploadingWaiver}
-                className="flex-1"
-              />
+            {requirePhoto && waiversEnabled ? <Separator /> : null}
+
+            {waiversEnabled && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium">Signed waiver *</div>
+                {member?.waiver_url ? (
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-green-100">
+                        <Check className="size-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">Waiver uploaded</div>
+                        <div className="text-sm text-muted-foreground">
+                          Signed on{" "}
+                          {member.waiver_signed_at
+                            ? new Date(member.waiver_signed_at).toLocaleDateString()
+                            : "Unknown date"}
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={member.waiver_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <input
+                  id="waiver-file"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => setWaiverFile(e.target.files?.[0] || null)}
+                  disabled={uploadingSubmission}
+                />
+                <button
+                  type="button"
+                  className="border-muted-foreground/25 hover:border-muted-foreground/40 bg-muted/20 hover:bg-muted/30 flex w-full items-center justify-between gap-3 rounded-lg border-2 border-dashed p-4 text-left transition-colors"
+                  onClick={() => document.getElementById("waiver-file")?.click()}
+                  disabled={uploadingSubmission}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const f = e.dataTransfer.files?.[0]
+                    if (f) setWaiverFile(f)
+                  }}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      {waiverFile ? "Ready to upload" : "Drag & drop your waiver"}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {waiverFile
+                        ? waiverFile.name
+                        : member?.waiver_url
+                          ? "Replace your waiver"
+                          : "PDF, JPG, or PNG"}
+                    </div>
+                  </div>
+                  <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                </button>
+              </div>
+            )}
+
+            {/* Single upload button (especially when both are enabled) */}
+            <div className="flex justify-end">
               <Button
-                onClick={handleWaiverUpload}
-                disabled={!waiverFile || uploadingWaiver}
-                size="sm"
+                onClick={handleSubmissionUpload}
+                disabled={
+                  uploadingSubmission ||
+                  ((requirePhoto && !member?.photo_url) && !photoFile) ||
+                  ((waiversEnabled && !member?.waiver_url) && !waiverFile) ||
+                  (!photoFile && !waiverFile)
+                }
               >
                 <Upload className="mr-2 size-4" />
-                {uploadingWaiver ? "Uploading..." : "Upload"}
+                {uploadingSubmission ? "Uploading..." : "Upload"}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Accepted formats: PDF, JPG, PNG (max 10MB)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Account Actions */}
       <Card>

@@ -1,56 +1,64 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
 
 import type { ClubData } from "../mock-data";
 
 export function HeroSection({ club }: { club: ClubData }) {
+  const hasImage = !!club.heroImage;
+
   return (
-    <section className="relative min-h-dvh overflow-hidden">
-      {/* Full Background Image */}
-      <Image
-        src={club.heroImage}
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-      />
-      
-      {/* Simple Dark Overlay */}
-      <div className="absolute inset-0 bg-black/40" />
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
+      {/* Background Image */}
+      {hasImage && (
+        <>
+          <Image
+            src={club.heroImage}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+        </>
+      )}
+
+      {/* Gradient background when no image */}
+      {!hasImage && (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100" />
+      )}
 
       {/* Content */}
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[1400px] items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
-        <div className="max-w-3xl space-y-6">
-          <div className="flex justify-center">
-            <Badge
-              variant="secondary"
-              className="gap-1.5 rounded-full px-3 py-1 bg-white/95 text-foreground backdrop-blur-sm"
+      <div
+        className={`relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 ${hasImage ? "text-center" : "text-center lg:text-left"}`}
+      >
+        <div
+          className={`max-w-4xl ${hasImage ? "mx-auto" : "mx-auto lg:mx-0"}`}
+        >
+          <h1
+            className={`mb-6 text-5xl font-bold tracking-tight leading-[1.1] sm:text-6xl md:text-7xl lg:text-8xl ${hasImage ? "text-white" : "text-gray-900"}`}
+          >
+            Welcome to {club.name}
+          </h1>
+
+          <p
+            className={`mb-10 max-w-2xl text-lg leading-relaxed sm:text-xl md:text-2xl ${hasImage ? "text-white/90" : "text-gray-600"} ${hasImage ? "mx-auto" : "mx-auto lg:mx-0"}`}
+          >
+            {club.tagline ||
+              "Join our community and be part of something special."}
+          </p>
+
+          <div
+            className={hasImage ? "flex justify-center" : "flex justify-center lg:justify-start"}
+          >
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-none px-8 font-medium shadow-lg transition-all duration-300 hover:shadow-xl sm:h-14 sm:px-10 sm:text-lg"
             >
-              <MapPin className="size-3.5" />
-              {club.location}
-            </Badge>
-          </div>
-
-          <div className="space-y-4">
-            <h1 className="text-balance text-5xl font-bold tracking-tight text-white drop-shadow-lg sm:text-7xl">
-              {club.name}
-            </h1>
-            <p className="text-balance text-xl text-white/90 drop-shadow-md sm:text-2xl">
-              {club.tagline}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
-            <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link href="/signup">Join now</Link>
-            </Button>
-            <Button asChild size="lg" variant="ghost" className="border-2 border-white/80 text-white hover:bg-white/10 hover:text-white hover:border-white">
-              <Link href="./events">View events</Link>
+              <Link href="#about">Learn More</Link>
             </Button>
           </div>
         </div>
@@ -58,4 +66,3 @@ export function HeroSection({ club }: { club: ClubData }) {
     </section>
   );
 }
-
