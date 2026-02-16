@@ -2,21 +2,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin } from "lucide-react";
 
 import { EventMapCard } from "@/components/maps/event-map-card";
-import { AddToGoogleCalendar } from "@/components/events/add-to-google-calendar";
 import { getClubBySubdomain, getEventById, getRequireLoginToRsvp, getRsvpsForEvent } from "@/lib/data/club-site";
 import { createClient } from "@/lib/supabase/server";
 
 import { EventRsvpCard } from "./event-rsvp-card";
 
 function formatEventDateLabel(isoDate: string | null) {
-  if (!isoDate) return "TBD";
-  const d = new Date(`${isoDate}T00:00:00`);
+  const raw = (isoDate ?? "").trim();
+  if (!raw) return "TBD";
+  const datePart = raw.includes("T") ? raw.slice(0, 10) : raw;
+  const d = new Date(`${datePart}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "TBD";
   return d.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -28,7 +28,7 @@ function formatEventTime(t: string | null) {
   const time = (t ?? "").trim();
   if (!time) return "TBD";
   if (/[ap]m$/i.test(time)) return time;
-  if (/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(time)) {
     const date = new Date(`1970-01-01T${time}`);
     if (!Number.isNaN(date.getTime())) {
       return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -50,15 +50,17 @@ export default async function EventPage({
 
   if (!event) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Event not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This event may have been moved or removed.
-        </p>
-        <Button asChild className="mt-6" variant="outline">
-          <Link href="../">Back to events</Link>
-        </Button>
-      </div>
+      <main className="flex-grow bg-white pt-28 pb-20">
+        <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Event not found</h1>
+          <p className="mt-2 text-base text-gray-600">
+            This event may have been moved or removed.
+          </p>
+          <Button asChild className="mt-6 rounded-none" variant="outline">
+            <Link href={`/${site}/events`}>Back to events</Link>
+          </Button>
+        </div>
+      </main>
     );
   }
 
@@ -106,72 +108,69 @@ export default async function EventPage({
   const maxAttendees = typeof event.max_attendees === "number" ? event.max_attendees : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-10 sm:px-6 lg:px-8">
-      {/* Hero Image Card at Top */}
-      <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl">
-        <Image
-          src={eventImageUrl}
-          alt={event.title ?? "Event image"}
-          fill
-          className="object-cover"
-          sizes="(max-width: 1400px) 100vw, 1400px"
-          priority
-        />
-      </div>
+    <main className="flex-grow bg-white pt-28 pb-20">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        {/* Back link — matches about/contact */}
+        <div className="mb-8">
+          <Link
+            href={`/${site}/events`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <span aria-hidden>←</span>
+            Back to events
+          </Link>
+        </div>
 
-      {/* Title and Metadata */}
-      <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{formatEventDateLabel(event.event_date)}</Badge>
-            <Badge>Run</Badge>
-          </div>
-          <h1 className="text-balance text-4xl font-bold tracking-tight">
-            {event.title ?? "Untitled"}
-          </h1>
-          <div className="flex flex-col gap-2 text-base text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center">
-            <span className="inline-flex items-center gap-2">
-              <Clock className="size-5" />
+        {/* Hero image — same container as other pages */}
+        <div className="relative aspect-[21/9] w-full overflow-hidden rounded-lg border border-gray-200 mb-10">
+          <Image
+            src={eventImageUrl}
+            alt={event.title ?? "Event image"}
+            fill
+            className="object-cover"
+            sizes="(max-width: 1400px) 100vw, 1400px"
+            priority
+          />
+        </div>
+
+        {/* Title and metadata — club site typography */}
+        <div className="mb-16">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-2">
+            <span className="font-semibold text-gray-900">
+              {formatEventDateLabel(event.event_date)}
+            </span>
+            <span>·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-4" />
               {formatEventTime(event.event_time)}{event.end_time ? ` – ${formatEventTime(typeof event.end_time === "string" ? event.end_time : null)}` : ""}
             </span>
-            <span className="hidden sm:inline">·</span>
-            <span className="inline-flex items-center gap-2">
-              <MapPin className="size-5" />
+            <span>·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="size-4" />
               {event.location_name ?? "TBD"}
             </span>
-            <span className="hidden sm:inline">·</span>
-            <span className="inline-flex items-center gap-2">
-              <Calendar className="size-5" />
-              Weekly club event
-            </span>
           </div>
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            {event.title ?? "Untitled"}
+          </h1>
         </div>
 
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="../">Back to events</Link>
-          </Button>
-        </div>
-      </div>
+        {/* Content grid — bordered blocks like about/contact */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="border border-gray-200 bg-white p-6 transition-all duration-300 hover:border-gray-300 lg:p-8">
+              <h2 className="mb-3 text-lg font-bold tracking-tight text-gray-900">Details</h2>
+              <div className="space-y-3 text-base leading-relaxed text-gray-700">
+                <p>{event.description ?? "Details coming soon."}</p>
+                <p>
+                  Bring water, wear reflective gear if it&apos;s dark, and introduce
+                  yourself to the group leader when you arrive.
+                </p>
+              </div>
+            </div>
+          </div>
 
-      {/* Content Grid */}
-      <div className="mt-10 grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-              <p>{event.description ?? "Details coming soon."}</p>
-              <p>
-                Bring water, wear reflective gear if it&apos;s dark, and introduce
-                yourself to the group leader when you arrive.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
+          <div className="space-y-6">
           {/* RSVP Card */}
           <EventRsvpCard
             eventId={event.id}
@@ -182,6 +181,14 @@ export default async function EventPage({
             requireLoginToRsvp={requireLoginToRsvp}
             isLoggedIn={!!membership}
             alreadyRsvped={existingRsvp}
+            eventDetails={{
+              title: event.title ?? null,
+              description: event.description ?? null,
+              eventDate: event.event_date ?? null,
+              eventTime: event.event_time ?? null,
+              endTime: typeof event.end_time === "string" ? event.end_time : null,
+              locationName: event.location_name ?? null,
+            }}
           />
 
           {/* Map Card — shown when coordinates exist */}
@@ -193,21 +200,9 @@ export default async function EventPage({
                 locationName={event.location_name}
               />
             )}
-
-          {/* Add to Google Calendar */}
-          {event.event_date && (
-            <AddToGoogleCalendar
-              title={event.title ?? "Event"}
-              description={event.description}
-              eventDate={event.event_date}
-              eventTime={event.event_time}
-              endTime={typeof event.end_time === "string" ? event.end_time : null}
-              locationName={event.location_name}
-              className="w-full"
-            />
-          )}
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

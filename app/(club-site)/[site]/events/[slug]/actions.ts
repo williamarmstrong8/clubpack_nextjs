@@ -65,7 +65,41 @@ export async function rsvpForEvent(eventId: string, clubId: string, site: string
 
   if (insertError) return { ok: false, error: insertError.message }
 
-  revalidatePath(`/events/${eventId}`)
-  revalidatePath("/events")
+  revalidatePath(`/${site}/events/${eventId}`)
+  revalidatePath(`/${site}/events`)
+  return { ok: true }
+}
+
+export async function removeRsvpForEvent(eventId: string, clubId: string, site: string): Promise<RsvpResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { ok: false, error: "Sign in to manage your RSVP." }
+  }
+
+  const eId = (eventId ?? "").trim()
+  const cId = (clubId ?? "").trim()
+  if (!eId || !cId) return { ok: false, error: "Invalid event or club." }
+
+  const { data: membership, error: memError } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("club_id", cId)
+    .eq("auth_user_id", user.id)
+    .maybeSingle()
+
+  if (memError) return { ok: false, error: "Could not load membership." }
+  if (!membership) return { ok: false, error: "Membership not found." }
+
+  const { error: deleteError } = await supabase
+    .from("rsvps")
+    .delete()
+    .eq("event_id", eId)
+    .eq("membership_id", membership.id)
+
+  if (deleteError) return { ok: false, error: deleteError.message }
+
+  revalidatePath(`/${site}/events/${eventId}`)
+  revalidatePath(`/${site}/events`)
   return { ok: true }
 }

@@ -9,7 +9,7 @@ import type { User } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,11 +140,11 @@ export function ClubNavbar({
                 href={href}
                 prefetch={true}
                 className={cn(
-                  "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  "rounded-none px-4 py-2 text-sm font-medium transition-colors",
                   isOnContentPage
                     ? "text-muted-foreground hover:text-foreground hover:bg-muted"
                     : "text-white/80 hover:text-white hover:bg-white/10",
-                  active && (isOnContentPage ? "text-foreground bg-muted" : "text-white bg-white/10")
+                  active && (isOnContentPage ? "text-foreground font-bold" : "text-white font-bold")
                 )}
               >
                 {item.label}
@@ -227,6 +227,7 @@ export function ClubNavbar({
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[320px] p-0">
+              <SheetTitle className="sr-only">Navigation menu</SheetTitle>
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <Link
@@ -264,8 +265,8 @@ export function ClubNavbar({
                         href={href}
                         prefetch={true}
                         className={cn(
-                          "rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
-                          active && "bg-muted text-foreground",
+                          "rounded-none px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted",
+                          active && "text-foreground font-bold",
                         )}
                       >
                         {item.label}

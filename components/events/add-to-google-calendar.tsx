@@ -30,8 +30,9 @@ function buildGoogleCalendarUrl({
   endTime,
   locationName,
 }: AddToGoogleCalendarProps): string | null {
-  const dateStr = (eventDate ?? "").trim()
-  if (!dateStr) return null
+  const raw = (eventDate ?? "").trim()
+  const dateStr = raw.slice(0, 10)
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null
 
   const date = new Date(`${dateStr}T00:00:00`)
   if (Number.isNaN(date.getTime())) return null
@@ -83,17 +84,16 @@ export function AddToGoogleCalendar({
   locationName,
   className,
 }: AddToGoogleCalendarProps) {
-  const handleClick = () => {
-    const url = buildGoogleCalendarUrl({
-      title,
-      description,
-      eventDate,
-      eventTime,
-      endTime,
-      locationName,
-    })
-    if (url) window.open(url, "_blank")
-  }
+  const url = buildGoogleCalendarUrl({
+    title,
+    description,
+    eventDate,
+    eventTime,
+    endTime,
+    locationName,
+  })
+
+  if (!url) return null
 
   return (
     <Button
@@ -101,10 +101,12 @@ export function AddToGoogleCalendar({
       variant="outline"
       size="sm"
       className={className}
-      onClick={handleClick}
+      asChild
     >
-      <Calendar className="size-4 mr-1.5" />
-      Add to Google Calendar
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        <Calendar className="size-4 mr-1.5" />
+        Add to Google Calendar
+      </a>
     </Button>
   )
 }

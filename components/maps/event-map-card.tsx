@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { MapPin, Navigation } from "lucide-react"
 
 interface EventMapCardProps {
@@ -35,60 +35,58 @@ export function EventMapCard({
   const appleMapsUrl = `https://maps.apple.com/?q=${latitude},${longitude}`
 
   return (
-    <Card className={className}>
-      <CardContent className="p-0 overflow-hidden">
-        {/* Static map image (only when token is set) */}
-        {staticMapUrl ? (
-          <div className="relative aspect-[5/3] w-full overflow-hidden rounded-t-xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={staticMapUrl}
-              alt={
-                locationName
-                  ? `Map of ${locationName}`
-                  : `Map at ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-              }
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          </div>
-        ) : (
-          <div className="relative flex aspect-[5/3] w-full items-center justify-center overflow-hidden rounded-t-xl bg-muted text-sm text-muted-foreground">
-            Map preview requires NEXT_PUBLIC_MAPBOX_TOKEN
+    <div className={cn("overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:border-gray-300", className)}>
+      {/* Static map image (only when token is set) — flush to top */}
+      {staticMapUrl ? (
+        <div className="relative aspect-[5/3] w-full overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={staticMapUrl}
+            alt={
+              locationName
+                ? `Map of ${locationName}`
+                : `Map at ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+            }
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      ) : (
+        <div className="relative flex aspect-[5/3] w-full items-center justify-center overflow-hidden bg-gray-100 text-sm text-gray-600">
+          Map preview requires NEXT_PUBLIC_MAPBOX_TOKEN
+        </div>
+      )}
+
+      {/* Location name + navigation — same block style as RSVP and Details */}
+      <div className="border-t border-gray-200 p-6 lg:p-8 space-y-3">
+        {locationName && (
+          <div className="flex items-start gap-2">
+            <MapPin className="size-5 mt-0.5 shrink-0 text-gray-500" />
+            <span className="text-base font-medium text-gray-900 leading-relaxed">{locationName}</span>
           </div>
         )}
 
-        {/* Location name + navigation buttons */}
-        <div className="p-4 space-y-3">
-          {locationName && (
-            <div className="flex items-start gap-2 text-sm">
-              <MapPin className="size-4 mt-0.5 shrink-0 text-muted-foreground" />
-              <span className="font-medium">{locationName}</span>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <Navigation className="size-3" />
-              Google Maps
-            </a>
-            <a
-              href={appleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <Navigation className="size-3" />
-              Apple Maps
-            </a>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-none border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-300"
+          >
+            <Navigation className="size-4" />
+            Google Maps
+          </a>
+          <a
+            href={appleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-none border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-300"
+          >
+            <Navigation className="size-4" />
+            Apple Maps
+          </a>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
