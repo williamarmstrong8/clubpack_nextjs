@@ -15,6 +15,7 @@ type DbEventRow = {
   location_name?: string | null
   status?: string | null
   max_attendees?: number | null
+  rsvp_open_time?: string | null
 }
 
 type DbRsvpRow = {
@@ -42,7 +43,7 @@ export default async function EventsPage() {
     supabase
       .from("events")
       .select(
-        "id, title, description, event_date, event_time, end_time, image_url, location_name, status, max_attendees",
+        "id, title, description, event_date, event_time, end_time, image_url, location_name, status, max_attendees, rsvp_open_time",
       )
       .eq("club_id", clubId)
       .order("event_date", { ascending: true }),

@@ -57,7 +57,7 @@ export default async function EventPage({
             This event may have been moved or removed.
           </p>
           <Button asChild className="mt-6 rounded-none" variant="outline">
-            <Link href={`/${site}/events`}>Back to events</Link>
+            <Link href="/events">Back to events</Link>
           </Button>
         </div>
       </main>
@@ -113,7 +113,7 @@ export default async function EventPage({
         {/* Back link — matches about/contact */}
         <div className="mb-8">
           <Link
-            href={`/${site}/events`}
+            href="/events"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
           >
             <span aria-hidden>←</span>
@@ -162,10 +162,6 @@ export default async function EventPage({
               <h2 className="mb-3 text-lg font-bold tracking-tight text-gray-900">Details</h2>
               <div className="space-y-3 text-base leading-relaxed text-gray-700">
                 <p>{event.description ?? "Details coming soon."}</p>
-                <p>
-                  Bring water, wear reflective gear if it&apos;s dark, and introduce
-                  yourself to the group leader when you arrive.
-                </p>
               </div>
             </div>
           </div>
@@ -178,6 +174,7 @@ export default async function EventPage({
             site={site}
             rsvps={rsvps}
             maxAttendees={maxAttendees}
+            rsvpOpenTime={event.rsvp_open_time ?? null}
             requireLoginToRsvp={requireLoginToRsvp}
             isLoggedIn={!!membership}
             alreadyRsvped={existingRsvp}

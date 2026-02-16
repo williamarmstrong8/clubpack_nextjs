@@ -66,23 +66,22 @@ export function ClubNavbar({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Prefetch nav routes + auth pages in the background so clicks are fast
+  // Prefetch nav routes + auth pages in the background so clicks are fast (subdomain routing: no /site in path)
   useEffect(() => {
-    const base = site ? `/${encodeURIComponent(site)}` : "";
-    router.prefetch(`${base}/events`);
-    router.prefetch(`${base}/about`);
-    router.prefetch(`${base}/contact`);
-    router.prefetch(`${base}/account`);
-    router.prefetch(`${base}/login`);
-    router.prefetch(`${base}/signup`);
-  }, [router, site]);
+    router.prefetch("/events");
+    router.prefetch("/about");
+    router.prefetch("/contact");
+    router.prefetch("/account");
+    router.prefetch("/login");
+    router.prefetch("/signup");
+  }, [router]);
 
   const clubName =
     (clubNameProp ?? "").trim() || titleCaseFromSlug(site ?? "club");
   const initials = initialsFromName(clubName);
 
-  // Base path for club site (keeps navigation under /[site]/... so event slug page gets correct params)
-  const base = site ? `/${encodeURIComponent(site)}` : "";
+  // Subdomain routing: links are /events, /about, etc. (no /site prefix)
+  const base = "";
 
   // Determine if we're on a page where navbar should be dark
   const isOnContentPage = pathname?.includes("/events") || pathname?.includes("/about") || pathname?.includes("/contact") || pathname?.includes("/policy") || pathname?.includes("/account");
@@ -97,8 +96,8 @@ export function ClubNavbar({
     [],
   );
 
-  const joinHref = `${base}/signup`;
-  const loginHref = `${base}/login`;
+  const joinHref = "/signup";
+  const loginHref = "/login";
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
@@ -132,8 +131,8 @@ export function ClubNavbar({
         {/* Center: Navigation Links (absolutely centered) */}
         <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navItems.map((item) => {
-            const href = `${base}${item.href}`;
-            const active = pathname === href;
+            const href = item.href;
+            const active = pathname === href || (href !== "/" && pathname?.startsWith(href + "/"));
             return (
               <Link
                 key={item.label}
@@ -257,8 +256,8 @@ export function ClubNavbar({
               <div className="p-3">
                 <nav className="grid gap-1">
                   {navItems.map((item) => {
-                    const href = `${base}${item.href}`;
-                    const active = pathname === href;
+                    const href = item.href;
+                    const active = pathname === href || (href !== "/" && pathname?.startsWith(href + "/"));
                     return (
                       <Link
                         key={item.label}

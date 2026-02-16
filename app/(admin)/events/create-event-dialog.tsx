@@ -124,8 +124,11 @@ export function CreateEventDialog({
       latitude: null as number | null,
       longitude: null as number | null,
       description: prefill?.description ?? "",
+      advancedSettings: false,
       hasCapacity: false,
       max_attendees: 50,
+      rsvp_open_time_date: "",
+      rsvp_open_time_time: "",
     }),
     [prefill],
   )
@@ -144,8 +147,11 @@ export function CreateEventDialog({
         latitude: null,
         longitude: null,
         description: prefill?.description ?? "",
+        advancedSettings: false,
         hasCapacity: false,
         max_attendees: 50,
+        rsvp_open_time_date: "",
+        rsvp_open_time_time: "",
       })
       setCoverFile(null)
       if (coverPreview?.startsWith("blob:")) URL.revokeObjectURL(coverPreview)
@@ -338,7 +344,15 @@ export function CreateEventDialog({
                   longitude: sel.longitude,
                 }))
               }
-              placeholder="Search address or place"
+              onChange={(text) =>
+                setForm((f) => ({
+                  ...f,
+                  location_name: text,
+                  latitude: null,
+                  longitude: null,
+                }))
+              }
+              placeholder="Address or place (optional — type or pick a suggestion)"
             />
           </div>
 
@@ -358,36 +372,122 @@ export function CreateEventDialog({
 
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div className="space-y-0.5">
-              <div className="text-sm font-medium">Limit capacity</div>
+              <div className="text-sm font-medium">Advanced Settings</div>
               <div className="text-xs text-muted-foreground">
-                Cap RSVP count for this event.
+                Capacity limit and RSVP open time.
               </div>
             </div>
             <Switch
-              checked={form.hasCapacity}
+              checked={form.advancedSettings}
               onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, hasCapacity: checked }))
+                setForm((f) => ({ ...f, advancedSettings: checked }))
               }
             />
           </div>
 
-          {form.hasCapacity ? (
-            <div className="grid gap-2">
-              <Label htmlFor="create-capacity">Capacity</Label>
-              <Input
-                id="create-capacity"
-                type="number"
-                min={1}
-                value={form.max_attendees}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    max_attendees: Number(e.target.value) || 0,
-                  }))
-                }
-              />
+          {form.advancedSettings && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">Limit capacity</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cap RSVP count for this event.
+                  </div>
+                </div>
+                <Switch
+                  checked={form.hasCapacity}
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, hasCapacity: checked }))
+                  }
+                />
+              </div>
+              {form.hasCapacity && (
+                <div className="grid gap-2">
+                  <Label htmlFor="create-capacity">Capacity</Label>
+                  <Input
+                    id="create-capacity"
+                    type="number"
+                    min={1}
+                    value={form.max_attendees}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        max_attendees: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label>RSVP Open Time</Label>
+                <p className="text-xs text-muted-foreground">
+                  Specify a date and time when attendees can start RSVPing. Before this time, RSVPs will be disabled.
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !form.rsvp_open_time_date && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {form.rsvp_open_time_date
+                          ? format(
+                              new Date(`${form.rsvp_open_time_date}T00:00:00`),
+                              "MMM d, yyyy",
+                            )
+                          : "Pick date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateFromIso(form.rsvp_open_time_date)}
+                        onSelect={(d) => {
+                          if (!d) return
+                          setForm((f) => ({
+                            ...f,
+                            rsvp_open_time_date: isoFromDate(d),
+                          }))
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Select
+                    value={
+                      times.some((t) => t.value === form.rsvp_open_time_time)
+                        ? form.rsvp_open_time_time
+                        : "_none"
+                    }
+                    onValueChange={(v) =>
+                      setForm((f) => ({
+                        ...f,
+                        rsvp_open_time_time: v === "_none" ? "" : v,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pick time" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[320px]">
+                      <SelectItem value="_none">No time</SelectItem>
+                      {times.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-          ) : null}
+          )}
         </div>
 
         <DialogFooter className="shrink-0">
@@ -414,8 +514,20 @@ export function CreateEventDialog({
                 fd.set("description", form.description.trim())
                 fd.set(
                   "max_attendees",
-                  form.hasCapacity ? String(form.max_attendees) : "",
+                  form.advancedSettings && form.hasCapacity ? String(form.max_attendees) : "",
                 )
+                if (
+                  form.advancedSettings &&
+                  form.rsvp_open_time_date &&
+                  form.rsvp_open_time_time
+                ) {
+                  const openDate = new Date(
+                    `${form.rsvp_open_time_date}T${form.rsvp_open_time_time}:00`,
+                  )
+                  if (!Number.isNaN(openDate.getTime())) {
+                    fd.set("rsvp_open_time", openDate.toISOString())
+                  }
+                }
                 if (coverFile) fd.set("cover_image", coverFile)
 
                 await createEvent(fd)
@@ -429,8 +541,11 @@ export function CreateEventDialog({
                   latitude: null,
                   longitude: null,
                   description: "",
-                  hasCapacity: true,
+                  advancedSettings: false,
+                  hasCapacity: false,
                   max_attendees: 50,
+                  rsvp_open_time_date: "",
+                  rsvp_open_time_time: "",
                 })
                 setCoverFile(null)
                 if (coverPreview) URL.revokeObjectURL(coverPreview)

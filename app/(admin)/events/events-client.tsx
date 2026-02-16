@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { format, isBefore, startOfDay } from "date-fns"
-import { CalendarPlus, MapPin, Users } from "lucide-react"
+import { CalendarPlus, MapPin, Trash2, Users } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -32,7 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
 import { cn } from "@/lib/utils"
-import { getEventRsvps, updateEvent, type EventRsvpForView } from "./actions"
+import { getEventRsvps, updateEvent, deleteEvent, type EventRsvpForView } from "./actions"
 import { CreateEventDialog } from "./create-event-dialog"
 
 function initials(name: string | null): string {
@@ -57,6 +58,7 @@ export type EventRow = {
   location_name?: string | null
   status?: string | null
   max_attendees?: number | null
+  rsvp_open_time?: string | null
   rsvpCount: number
 }
 
@@ -176,6 +178,7 @@ function badgeForEvent(e: EventRow) {
 }
 
 export function EventsClient({ events }: { events: EventRow[] }) {
+  const router = useRouter()
   const [tab, setTab] = React.useState<"upcoming" | "past">("upcoming")
   const [pastVisible, setPastVisible] = React.useState(6)
   const [viewOpen, setViewOpen] = React.useState(false)
@@ -184,6 +187,12 @@ export function EventsClient({ events }: { events: EventRow[] }) {
   const [rsvpsAllOpen, setRsvpsAllOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<EventRow | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null)
+
+  const RSVP_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+  const rsvpCacheRef = React.useRef<
+    Map<string, { data: EventRsvpForView[]; timestamp: number }>
+  >(new Map())
 
   const [isPending, startTransition] = React.useTransition()
 
@@ -194,9 +203,12 @@ export function EventsClient({ events }: { events: EventRow[] }) {
     end_time: "",
     location_name: "",
     description: "",
-    status: "active",
+    status: "upcoming",
+    advancedSettings: false,
     hasCapacity: true,
     max_attendees: 50,
+    rsvp_open_time_date: "",
+    rsvp_open_time_time: "",
   })
 
   const [editCoverFile, setEditCoverFile] = React.useState<File | null>(null)
@@ -245,7 +257,21 @@ export function EventsClient({ events }: { events: EventRow[] }) {
 
   React.useEffect(() => {
     if (viewOpen && viewing?.id) {
-      getEventRsvps(viewing.id).then(setViewRsvps)
+      const cached = rsvpCacheRef.current.get(viewing.id)
+      if (
+        cached &&
+        Date.now() - cached.timestamp < RSVP_CACHE_TTL_MS
+      ) {
+        setViewRsvps(cached.data)
+      } else {
+        getEventRsvps(viewing.id).then((data) => {
+          rsvpCacheRef.current.set(viewing.id, {
+            data,
+            timestamp: Date.now(),
+          })
+          setViewRsvps(data)
+        })
+      }
     } else {
       setViewRsvps(null)
       setRsvpsAllOpen(false)
@@ -488,9 +514,12 @@ export function EventsClient({ events }: { events: EventRow[] }) {
               onClick={() => {
                 if (!viewing) return
                 setEditing(viewing)
+                setDeleteConfirmId(null)
                 setViewRsvps(null)
                 setRsvpsAllOpen(false)
-                setEditForm({
+                const rsvpOpen = viewing.rsvp_open_time?.trim()
+                  const rsvpOpenDate = rsvpOpen && !Number.isNaN(new Date(rsvpOpen).getTime()) ? new Date(rsvpOpen) : null
+                  setEditForm({
                   title: viewing.title ?? "",
                   event_date: viewing.event_date ?? "",
                   event_time: viewing.event_time
@@ -501,9 +530,17 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                     : "",
                   location_name: viewing.location_name ?? "",
                   description: viewing.description ?? "",
-                  status: viewing.status ?? "active",
+                  status: viewing.status ?? "upcoming",
+                  advancedSettings:
+                    typeof viewing.max_attendees === "number" || !!rsvpOpenDate,
                   hasCapacity: typeof viewing.max_attendees === "number",
                   max_attendees: viewing.max_attendees ?? 50,
+                  rsvp_open_time_date: rsvpOpenDate
+                    ? format(rsvpOpenDate, "yyyy-MM-dd")
+                    : "",
+                  rsvp_open_time_time: rsvpOpenDate
+                    ? format(rsvpOpenDate, "HH:mm")
+                    : "",
                 })
                 setEditCoverFile(null)
                 setEditCoverPreview(viewing.image_url ?? null)
@@ -566,7 +603,13 @@ export function EventsClient({ events }: { events: EventRow[] }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open)
+          if (!open) setDeleteConfirmId(null)
+        }}
+      >
         <DialogContent className="sm:max-w-[600px] h-[85vh] max-h-[85vh] overflow-hidden grid !grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Edit event</DialogTitle>
@@ -741,82 +784,220 @@ export function EventsClient({ events }: { events: EventRow[] }) {
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">Limit capacity</div>
+                <div className="text-sm font-medium">Advanced Settings</div>
                 <div className="text-xs text-muted-foreground">
-                  Cap RSVP count for this event.
+                  Capacity limit and RSVP open time.
                 </div>
               </div>
               <Switch
-                checked={editForm.hasCapacity}
+                checked={editForm.advancedSettings}
                 onCheckedChange={(checked) =>
-                  setEditForm((f) => ({ ...f, hasCapacity: checked }))
+                  setEditForm((f) => ({ ...f, advancedSettings: checked }))
                 }
               />
             </div>
 
-            {editForm.hasCapacity ? (
-              <div className="grid gap-2">
-                <Label htmlFor="edit-capacity">Capacity</Label>
-                <Input
-                  id="edit-capacity"
-                  type="number"
-                  min={1}
-                  value={editForm.max_attendees}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      max_attendees: Number(e.target.value) || 0,
-                    }))
-                  }
-                />
+            {editForm.advancedSettings && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">Limit capacity</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cap RSVP count for this event.
+                    </div>
+                  </div>
+                  <Switch
+                    checked={editForm.hasCapacity}
+                    onCheckedChange={(checked) =>
+                      setEditForm((f) => ({ ...f, hasCapacity: checked }))
+                    }
+                  />
+                </div>
+                {editForm.hasCapacity && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-capacity">Capacity</Label>
+                    <Input
+                      id="edit-capacity"
+                      type="number"
+                      min={1}
+                      value={editForm.max_attendees}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          max_attendees: Number(e.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  <Label>RSVP Open Time</Label>
+                  <p className="text-xs text-muted-foreground">
+                    When attendees can start RSVPing. Before this time, RSVPs are disabled.
+                  </p>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "justify-start text-left font-normal",
+                            !editForm.rsvp_open_time_date && "text-muted-foreground",
+                          )}
+                        >
+                          {editForm.rsvp_open_time_date
+                            ? formatDate(editForm.rsvp_open_time_date)
+                            : "Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dateFromIso(editForm.rsvp_open_time_date)}
+                          onSelect={(d) => {
+                            if (!d) return
+                            setEditForm((f) => ({
+                              ...f,
+                              rsvp_open_time_date: isoFromDate(d),
+                            }))
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Select
+                      value={
+                        editForm.rsvp_open_time_time &&
+                        times.some((t) => t.value === editForm.rsvp_open_time_time)
+                          ? editForm.rsvp_open_time_time
+                          : "_none"
+                      }
+                      onValueChange={(v) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          rsvp_open_time_time: v === "_none" ? "" : v,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pick time" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[320px]">
+                        <SelectItem value="_none">No time</SelectItem>
+                        {times.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-            ) : null}
+            )}
           </div>
 
-          <DialogFooter className="shrink-0">
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Close
-            </Button>
-            <Button
-              disabled={
-                isPending ||
-                !editing ||
-                !editForm.title.trim() ||
-                !editForm.event_date ||
-                !editForm.event_time
-              }
-              onClick={() => {
-                if (!editing) return
-                startTransition(async () => {
-                  const fd = new FormData()
-                  fd.set("id", editing.id)
-                  fd.set("title", editForm.title.trim())
-                  fd.set("event_date", editForm.event_date)
-                  fd.set("event_time", editForm.event_time)
-                  fd.set("end_time", editForm.end_time.trim())
-                  fd.set("location_name", editForm.location_name.trim())
+          <DialogFooter className="shrink-0 flex-wrap gap-2">
+            <div className="flex flex-1 justify-start">
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={isPending || !editing}
+                onClick={() => {
+                  if (!editing) return
+                  if (deleteConfirmId === editing.id) {
+                    startTransition(async () => {
+                      await deleteEvent(editing.id)
+                      setEditOpen(false)
+                      setEditing(null)
+                      setDeleteConfirmId(null)
+                      setEditCoverFile(null)
+                      if (editCoverPreview?.startsWith("blob:")) {
+                        URL.revokeObjectURL(editCoverPreview)
+                      }
+                      setEditCoverPreview(null)
+                      router.refresh()
+                    })
+                  } else {
+                    setDeleteConfirmId(editing.id)
+                    setTimeout(() => setDeleteConfirmId(null), 3000)
+                  }
+                }}
+              >
+                {deleteConfirmId === editing?.id ? (
+                  "Click again to delete"
+                ) : (
+                  <>
+                    <Trash2 className="size-4 mr-1.5" />
+                    Delete event
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setEditOpen(false); setDeleteConfirmId(null) }}>
+                Close
+              </Button>
+              <Button
+                disabled={
+                  isPending ||
+                  !editing ||
+                  !editForm.title.trim() ||
+                  !editForm.event_date ||
+                  !editForm.event_time
+                }
+                onClick={() => {
+                  if (!editing) return
+                  startTransition(async () => {
+                    const fd = new FormData()
+                    fd.set("id", editing.id)
+                    fd.set("title", editForm.title.trim())
+                    fd.set("event_date", editForm.event_date)
+                    fd.set("event_time", editForm.event_time)
+                    fd.set("end_time", editForm.end_time.trim())
+fd.set("location_name", editForm.location_name.trim())
                   fd.set("description", editForm.description.trim())
                   fd.set("status", editForm.status)
                   fd.set(
                     "max_attendees",
-                    editForm.hasCapacity ? String(editForm.max_attendees) : "",
+                    editForm.advancedSettings && editForm.hasCapacity
+                      ? String(editForm.max_attendees)
+                      : "",
                   )
+                  if (
+                    editForm.advancedSettings &&
+                    editForm.rsvp_open_time_date &&
+                    editForm.rsvp_open_time_time
+                  ) {
+                    const openDate = new Date(
+                      `${editForm.rsvp_open_time_date}T${editForm.rsvp_open_time_time}:00`,
+                    )
+                    if (!Number.isNaN(openDate.getTime())) {
+                      fd.set("rsvp_open_time", openDate.toISOString())
+                    }
+                  } else {
+                    fd.set("rsvp_open_time", "")
+                  }
                   if (editCoverFile) fd.set("cover_image", editCoverFile)
 
-                  await updateEvent(fd)
+                    await updateEvent(fd)
 
-                  setEditOpen(false)
-                  setEditing(null)
-                  setEditCoverFile(null)
-                  if (editCoverPreview?.startsWith("blob:")) {
-                    URL.revokeObjectURL(editCoverPreview)
-                  }
-                  setEditCoverPreview(null)
-                })
-              }}
-            >
-              {isPending ? "Saving..." : "Save changes"}
-            </Button>
+                    setEditOpen(false)
+                    setEditing(null)
+                    setEditCoverFile(null)
+                    if (editCoverPreview?.startsWith("blob:")) {
+                      URL.revokeObjectURL(editCoverPreview)
+                    }
+                    setEditCoverPreview(null)
+                  })
+                }}
+              >
+                {isPending ? "Saving..." : "Save changes"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

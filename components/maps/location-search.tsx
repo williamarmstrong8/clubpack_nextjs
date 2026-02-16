@@ -15,6 +15,8 @@ export interface LocationSelection {
 interface LocationSearchProps {
   value: string
   onSelect: (selection: LocationSelection) => void
+  /** Called when the user types, so the parent can store plain text when no suggestion is chosen */
+  onChange?: (text: string) => void
   placeholder?: string
   className?: string
 }
@@ -39,6 +41,7 @@ function useDebounce<T>(value: T, delay: number) {
 export function LocationSearch({
   value,
   onSelect,
+  onChange,
   placeholder = "Search address or place",
   className,
 }: LocationSearchProps) {
@@ -77,7 +80,7 @@ export function LocationSearch({
       }
       if (!MAPBOX_TOKEN) {
         setResults([])
-        setErrorMsg("Set NEXT_PUBLIC_MAPBOX_TOKEN to enable location search.")
+        setErrorMsg(null)
         return
       }
       setIsLoading(true)
@@ -120,8 +123,10 @@ export function LocationSearch({
       <Input
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value)
+          const text = e.target.value
+          setQuery(text)
           setIsOpen(true)
+          onChange?.(text)
         }}
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}

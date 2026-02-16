@@ -100,6 +100,7 @@ function toClubEvent(e: EventRow): ClubEvent {
     imageUrl: imageUrl || "/club-photos/happy-group.webp",
     description: e.description ?? null,
     max_attendees: typeof e.max_attendees === "number" ? e.max_attendees : null,
+    rsvpCount: e.rsvpCount ?? 0,
   }
 }
 

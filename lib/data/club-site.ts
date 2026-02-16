@@ -34,6 +34,10 @@ export type EventRow = {
   longitude?: number | null
   status?: string | null
   max_attendees?: number | null
+  /** When set, RSVPs are disabled until this time (ISO string). */
+  rsvp_open_time?: string | null
+  /** Number of RSVPs for this event (set when fetched with counts). */
+  rsvpCount?: number
   [key: string]: unknown
 }
 
@@ -83,16 +87,28 @@ export const getUpcomingEventsByClubId = cache(async (clubId: string, limit = 6)
 
   const todayIso = new Date().toISOString().slice(0, 10)
 
-  const { data, error } = await supabase
-    .from("events")
-    .select("*")
-    .eq("club_id", id)
-    .gte("event_date", todayIso)
-    .order("event_date", { ascending: true })
-    .limit(limit)
+  const [eventsRes, rsvpsRes] = await Promise.all([
+    supabase
+      .from("events")
+      .select("*")
+      .eq("club_id", id)
+      .gte("event_date", todayIso)
+      .order("event_date", { ascending: true })
+      .limit(limit),
+    supabase.from("rsvps").select("event_id").eq("club_id", id),
+  ])
 
-  if (error) throw new Error(error.message)
-  return (data as EventRow[]) ?? []
+  if (eventsRes.error) throw new Error(eventsRes.error.message)
+  const events = (eventsRes.data as EventRow[]) ?? []
+
+  const rsvpCounts = new Map<string, number>()
+  if (!rsvpsRes.error && rsvpsRes.data) {
+    for (const r of rsvpsRes.data as { event_id: string | null }[]) {
+      if (r.event_id) rsvpCounts.set(r.event_id, (rsvpCounts.get(r.event_id) ?? 0) + 1)
+    }
+  }
+
+  return events.map((e) => ({ ...e, rsvpCount: rsvpCounts.get(e.id) ?? 0 }))
 })
 
 export const getEventById = cache(async (clubId: string, eventId: string): Promise<EventRow | null> => {

@@ -29,12 +29,28 @@ function initials(name: string | null): string {
     .slice(0, 2)
 }
 
+function formatRsvpOpenDate(iso: string | null) {
+  if (!iso?.trim()) return ""
+  const d = new Date(iso.trim())
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+}
+
+function formatRsvpOpenTime(iso: string | null) {
+  if (!iso?.trim()) return ""
+  const d = new Date(iso.trim())
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+}
+
 type Props = {
   eventId: string
   clubId: string
   site: string
   rsvps: EventRsvpRow[]
   maxAttendees: number | null
+  /** When set and current time is before this, RSVPs are disabled */
+  rsvpOpenTime: string | null
   requireLoginToRsvp: boolean
   isLoggedIn: boolean
   alreadyRsvped: boolean
@@ -75,6 +91,7 @@ export function EventRsvpCard({
   site,
   rsvps,
   maxAttendees,
+  rsvpOpenTime,
   requireLoginToRsvp,
   isLoggedIn,
   alreadyRsvped,
@@ -85,11 +102,16 @@ export function EventRsvpCard({
   const [message, setMessage] = React.useState<string | null>(null)
   const [showRsvpSuccessModal, setShowRsvpSuccessModal] = React.useState(false)
 
+  const rsvpNotYetOpen =
+    !!rsvpOpenTime &&
+    !Number.isNaN(new Date(rsvpOpenTime).getTime()) &&
+    new Date() < new Date(rsvpOpenTime)
+
   const atCapacity = typeof maxAttendees === "number" && rsvps.length >= maxAttendees
-  const canRsvp = isLoggedIn && !alreadyRsvped && !atCapacity
+  const canRsvp = isLoggedIn && !alreadyRsvped && !atCapacity && !rsvpNotYetOpen
 
   function handleRsvp() {
-    if (!isLoggedIn || alreadyRsvped || atCapacity) return
+    if (!isLoggedIn || alreadyRsvped || atCapacity || rsvpNotYetOpen) return
     setMessage(null)
     startTransition(async () => {
       const result: RsvpResult = await rsvpForEvent(eventId, clubId, site)
@@ -146,6 +168,12 @@ export function EventRsvpCard({
           <p className="text-sm text-red-600">{message}</p>
         )}
 
+        {rsvpNotYetOpen && (
+          <p className="text-sm text-gray-600">
+            RSVPs open on {formatRsvpOpenDate(rsvpOpenTime)} at {formatRsvpOpenTime(rsvpOpenTime)}.
+          </p>
+        )}
+
         {alreadyRsvped && (
           <Button
             className="w-full rounded-none bg-green-600 text-white hover:bg-green-700"
@@ -161,11 +189,11 @@ export function EventRsvpCard({
           <p className="text-sm text-gray-600">This event is full.</p>
         )}
 
-        {!alreadyRsvped && !atCapacity && (
+        {!alreadyRsvped && !atCapacity && !rsvpNotYetOpen && (
           <>
             {requireLoginToRsvp && !isLoggedIn ? (
               <Button asChild className="w-full rounded-none bg-primary hover:bg-primary/90" size="lg">
-                <Link href={`/${site}/login?next=/${site}/events/${eventId}`}>
+                <Link href={`/login?next=/events/${eventId}`}>
                   Sign in to RSVP
                 </Link>
               </Button>
@@ -180,7 +208,7 @@ export function EventRsvpCard({
               </Button>
             ) : (
               <Button asChild className="w-full rounded-none bg-primary hover:bg-primary/90" size="lg">
-                <Link href={`/${site}/signup?next=/${site}/events/${eventId}`}>
+                <Link href={`/signup?next=/events/${eventId}`}>
                   RSVP for this event
                 </Link>
               </Button>
