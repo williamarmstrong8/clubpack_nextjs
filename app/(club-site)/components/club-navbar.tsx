@@ -81,6 +81,9 @@ export function ClubNavbar({
     (clubNameProp ?? "").trim() || titleCaseFromSlug(site ?? "club");
   const initials = initialsFromName(clubName);
 
+  // Base path for club site (keeps navigation under /[site]/... so event slug page gets correct params)
+  const base = site ? `/${encodeURIComponent(site)}` : "";
+
   // Determine if we're on a page where navbar should be dark
   const isOnContentPage = pathname?.includes("/events") || pathname?.includes("/about") || pathname?.includes("/contact") || pathname?.includes("/policy") || pathname?.includes("/account");
   const textColor = isOnContentPage ? 'text-foreground' : 'text-white';
@@ -94,7 +97,8 @@ export function ClubNavbar({
     [],
   );
 
-  const joinHref = "/signup";
+  const joinHref = `${base}/signup`;
+  const loginHref = `${base}/login`;
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
@@ -102,7 +106,7 @@ export function ClubNavbar({
         {/* Left: Logo + Club Name */}
         <div className="flex items-center gap-3 flex-1">
           <Link
-            href="/"
+            href={base || "/"}
             className={cn("inline-flex items-center gap-2.5 font-semibold tracking-tight", textColor)}
           >
             {clubLogo ? (
@@ -128,7 +132,7 @@ export function ClubNavbar({
         {/* Center: Navigation Links (absolutely centered) */}
         <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navItems.map((item) => {
-            const href = item.href;
+            const href = `${base}${item.href}`;
             const active = pathname === href;
             return (
               <Link
@@ -205,7 +209,7 @@ export function ClubNavbar({
                   ? "text-foreground hover:bg-muted"
                   : "text-white hover:bg-white/10 hover:text-white"
               )}>
-                <Link href="/login" prefetch={true}>Log in</Link>
+                <Link href={loginHref} prefetch={true}>Log in</Link>
               </Button>
               <Button asChild className="rounded-none bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Link href={joinHref} prefetch={true}>Join Club</Link>
@@ -226,7 +230,7 @@ export function ClubNavbar({
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <Link
-                    href="/"
+                    href={base || "/"}
                     className="inline-flex items-center gap-2.5 font-semibold tracking-tight"
                   >
                     {clubLogo ? (
@@ -252,7 +256,7 @@ export function ClubNavbar({
               <div className="p-3">
                 <nav className="grid gap-1">
                   {navItems.map((item) => {
-                    const href = item.href;
+                    const href = `${base}${item.href}`;
                     const active = pathname === href;
                     return (
                       <Link
@@ -283,7 +287,7 @@ export function ClubNavbar({
                       </div>
                     </div>
                     <Button asChild className="w-full" variant="outline">
-                      <Link href="/account" prefetch={true}>
+                      <Link href={`${base}/account`} prefetch={true}>
                         <Settings className="mr-2 size-4" />
                         Account Settings
                       </Link>
@@ -303,7 +307,7 @@ export function ClubNavbar({
                       <Link href={joinHref} prefetch={true}>Join Club</Link>
                     </Button>
                     <Button asChild className="mt-2 w-full rounded-none" variant="outline">
-                      <Link href="/login" prefetch={true}>Log in</Link>
+                      <Link href={loginHref} prefetch={true}>Log in</Link>
                     </Button>
                     <p className="mt-3 text-xs text-muted-foreground">
                       Free to join. Weekly community events.

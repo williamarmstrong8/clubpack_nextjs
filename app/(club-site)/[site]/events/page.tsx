@@ -109,7 +109,7 @@ export default async function ClubEventsPage({
                   className="flex flex-col overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:border-gray-300"
                 >
                   {/* Image - 16:9 aspect ratio */}
-                  <Link href={`./${event.slug}`} className="relative block aspect-video w-full shrink-0">
+                  <Link href={`/${site}/events/${event.slug}`} className="relative block aspect-video w-full shrink-0">
                     {event.imageUrl ? (
                       <Image
                         src={event.imageUrl}
@@ -140,7 +140,7 @@ export default async function ClubEventsPage({
                       )}
 
                       <h2 className="mb-4 mt-4 line-clamp-2 text-xl font-bold leading-tight text-gray-900 sm:text-2xl">
-                        <Link href={`./${event.slug}`} className="hover:underline">
+                        <Link href={`/${site}/events/${event.slug}`} className="hover:underline">
                           {event.title}
                         </Link>
                       </h2>
@@ -175,7 +175,7 @@ export default async function ClubEventsPage({
                       asChild
                       className="h-auto w-full rounded-none bg-primary px-8 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-300 hover:opacity-90 hover:shadow-md"
                     >
-                      <Link href={`./${event.slug}`}>View Details</Link>
+                      <Link href={`/${site}/events/${event.slug}`}>View Details</Link>
                     </Button>
                   </div>
                 </div>
