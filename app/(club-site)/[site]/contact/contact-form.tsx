@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,12 +39,11 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Send us a message</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="border border-gray-200 bg-white p-6 lg:p-8">
+      <h2 className="mb-6 text-lg font-bold tracking-tight text-gray-900 sm:text-xl">
+        Send us a message
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
           {success && (
             <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
               Message sent! We'll get back to you soon.
@@ -116,11 +114,10 @@ export function ContactForm({ site, clubName }: { site: string; clubName: string
             />
           </div>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          <Button type="submit" className="h-auto w-full rounded-none px-8 py-2.5 text-sm font-medium" size="lg" disabled={loading}>
             {loading ? "Sending..." : "Send message"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

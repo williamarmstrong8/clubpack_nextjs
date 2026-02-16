@@ -1,21 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink, ImagePlus } from "lucide-react"
+import { ExternalLink, ImagePlus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import {
   createFaq,
@@ -483,31 +475,15 @@ export function WebsiteClient({
                 </Button>
               </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">Order</TableHead>
-                      <TableHead>Question</TableHead>
-                      <TableHead>Answer</TableHead>
-                      <TableHead className="w-[180px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {faqs.map((f) => (
-                      <FaqRowEditor key={f.id} row={f} disabled={isPending} />
-                    ))}
-                    {faqs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="py-10 text-center">
-                          <div className="text-sm text-muted-foreground">
-                            No FAQs yet.
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
+              <div className="flex flex-col gap-4">
+                {faqs.map((f) => (
+                  <FaqRowEditor key={f.id} row={f} disabled={isPending} />
+                ))}
+                {faqs.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground rounded-lg border border-dashed">
+                    No FAQs yet.
+                  </div>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -528,63 +504,55 @@ function FaqRowEditor({
   const [local, setLocal] = React.useState(row)
 
   return (
-    <TableRow>
-      <TableCell>
-        <Input
-          value={String(local.order_index)}
-          onChange={(e) =>
-            setLocal((p) => ({ ...p, order_index: Number(e.target.value) || 0 }))
-          }
-          disabled={disabled || isPending}
-        />
-      </TableCell>
-      <TableCell>
+    <div className="grid gap-3 rounded-lg border p-3">
+      <div className="grid gap-2">
+        <Label>Question</Label>
         <Input
           value={local.question}
           onChange={(e) => setLocal((p) => ({ ...p, question: e.target.value }))}
           disabled={disabled || isPending}
         />
-      </TableCell>
-      <TableCell>
+      </div>
+      <div className="grid gap-2">
+        <Label>Answer</Label>
         <Textarea
-          rows={2}
+          rows={3}
           value={local.answer}
           onChange={(e) => setLocal((p) => ({ ...p, answer: e.target.value }))}
           disabled={disabled || isPending}
         />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            disabled={disabled || isPending}
-            onClick={() => {
-              startTransition(async () => {
-                await updateFaq({
-                  id: row.id,
-                  question: local.question,
-                  answer: local.answer,
-                  order_index: local.order_index,
-                })
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button
+          disabled={disabled || isPending}
+          onClick={() => {
+            startTransition(async () => {
+              await updateFaq({
+                id: row.id,
+                question: local.question,
+                answer: local.answer,
+                order_index: row.order_index,
               })
-            }}
-          >
-            {isPending ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={disabled || isPending}
-            onClick={() => {
-              startTransition(async () => {
-                await deleteFaq(row.id)
-              })
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
+            })
+          }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          variant="destructive"
+          size="icon"
+          disabled={disabled || isPending}
+          onClick={() => {
+            startTransition(async () => {
+              await deleteFaq(row.id)
+            })
+          }}
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   )
 }
 

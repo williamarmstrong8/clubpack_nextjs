@@ -2,9 +2,9 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { MDXRemote } from "next-mdx-remote/rsc"
+import ReactMarkdown from "react-markdown"
 import { getAllSlugs, getPostBySlug } from "@/lib/blog"
-import { mdxComponents } from "../components/mdx-components"
+import { markdownComponents } from "../components/mdx-components"
 
 export function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }))
@@ -117,8 +117,8 @@ export default async function BlogPostPage({ params }: PageProps) {
             </div>
 
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10 lg:p-12">
-              <div className="mdx-content">
-                <MDXRemote source={content} components={mdxComponents} />
+              <div className="mdx-content prose prose-gray max-w-none">
+                <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
               </div>
             </div>
 

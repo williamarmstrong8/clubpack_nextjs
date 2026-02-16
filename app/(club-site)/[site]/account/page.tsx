@@ -17,16 +17,21 @@ export default async function AccountPage({
   }
 
   const supabase = await createClient();
+  const club = await getClubBySubdomain(site);
 
-  // Fetch member profile
-  const { data: member } = await supabase
-    .from("members")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Fetch membership for this club + user (single source of truth for profile)
+  let membership: { id: string; name: string | null; email: string | null; phone: string | null; avatar_url: string | null } | null = null;
+  if (club?.id) {
+    const { data } = await supabase
+      .from("memberships")
+      .select("id, name, email, phone, avatar_url")
+      .eq("club_id", club.id)
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    membership = data as typeof membership;
+  }
 
   // Check waiver settings for club (enabled + required fields)
-  const club = await getClubBySubdomain(site);
   let waiversEnabled = false;
   let requirePhoto = false;
   if (club?.id) {
@@ -41,8 +46,9 @@ export default async function AccountPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 md:py-14 lg:px-8">
-      <div className="mx-auto w-full max-w-3xl">
+    <main className="flex-grow bg-white pt-28 pb-20">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-3xl">
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
           <p className="text-muted-foreground">
@@ -53,11 +59,12 @@ export default async function AccountPage({
           site={site}
           clubId={club?.id ?? null}
           user={user}
-          member={member}
+          membership={membership}
           waiversEnabled={waiversEnabled}
           requirePhoto={requirePhoto}
         />
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

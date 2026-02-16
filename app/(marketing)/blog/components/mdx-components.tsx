@@ -1,14 +1,15 @@
 import Image from "next/image"
 import Link from "next/link"
 
-/** Type for MDX custom components (avoids mdx/types dependency). */
-type MDXComponents = Record<string, React.ComponentType<Record<string, unknown>>>
+/** Type for custom components (MDX or react-markdown). */
+type MarkdownComponents = Record<string, React.ComponentType<Record<string, unknown>>>
 
 /**
- * MDX components styled for the marketing light theme:
+ * Styled components for blog markdown:
  * dark text, white/gray backgrounds, blue accent links.
+ * Used by react-markdown (no next-mdx-remote).
  */
-export const mdxComponents: MDXComponents = {
+export const markdownComponents: MarkdownComponents = {
   h1: (props) => (
     <h1
       className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-10 mb-4"
@@ -99,3 +100,6 @@ export const mdxComponents: MDXComponents = {
     <td className="border-b border-gray-100 px-4 py-3" {...props} />
   ),
 }
+
+/** @deprecated Use markdownComponents with react-markdown. */
+export const mdxComponents = markdownComponents

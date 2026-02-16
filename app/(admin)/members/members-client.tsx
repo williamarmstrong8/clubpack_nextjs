@@ -17,13 +17,14 @@ import {
 } from "@/components/ui/table"
 
 import { InviteMembersDialog } from "@/app/(admin)/components/invite-members-dialog"
+import { MemberModal } from "./member-modal"
 
 export type MemberRow = {
   id: string
   name: string | null
   email: string | null
   joined_at: string | null
-  status: string | null
+  phone?: string | null
   role?: string | null
   avatar_url?: string | null
 }
@@ -49,6 +50,13 @@ export function MembersClient({
   adminCount: number
 }) {
   const [query, setQuery] = React.useState("")
+  const [selectedMember, setSelectedMember] = React.useState<MemberRow | null>(null)
+  const [memberModalOpen, setMemberModalOpen] = React.useState(false)
+
+  const openMemberModal = (member: MemberRow) => {
+    setSelectedMember(member)
+    setMemberModalOpen(true)
+  }
 
   const filtered = members.filter((m) => {
     const name = (m.name ?? "").toLowerCase()
@@ -147,7 +155,11 @@ export function MembersClient({
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow
+                    key={m.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openMemberModal(m)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-9 w-9">
@@ -190,6 +202,12 @@ export function MembersClient({
           </div>
         </CardContent>
       </Card>
+
+      <MemberModal
+        member={selectedMember}
+        open={memberModalOpen}
+        onOpenChange={setMemberModalOpen}
+      />
     </div>
   )
 }

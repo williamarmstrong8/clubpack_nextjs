@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const metadata = {
   title: "Pricing",
@@ -239,26 +245,27 @@ export default function PricingPage() {
         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-blue-50/50 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16 w-full relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-gray-900 mb-4 tracking-tight leading-[1.1]">
+          <div className="mb-12">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
               Frequently Asked Questions
             </h2>
-            <p className="text-2xl text-gray-600">Got questions? We&apos;ve got answers.</p>
+            <p className="mt-4 text-lg leading-relaxed text-gray-700 sm:text-xl">
+              Got questions? We&apos;ve got answers.
+            </p>
           </div>
 
-          <div className="space-y-4">
-            {faqs.map((faq) => (
-              <details
-                key={faq.q}
-                className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-gray-100"
-              >
-                <summary className="cursor-pointer text-xl md:text-2xl font-bold text-gray-900">
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map((faq, index) => (
+              <AccordionItem key={faq.q} value={`pricing-faq-${index}`}>
+                <AccordionTrigger className="text-left text-lg font-medium sm:text-xl">
                   {faq.q}
-                </summary>
-                <p className="mt-4 text-gray-600 leading-relaxed">{faq.a}</p>
-              </details>
+                </AccordionTrigger>
+                <AccordionContent className="text-lg leading-relaxed text-gray-700 sm:text-xl">
+                  {faq.a}
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </div>
       </section>
     </>

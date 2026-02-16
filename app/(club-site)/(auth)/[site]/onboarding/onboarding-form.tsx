@@ -1,20 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
+import { Upload } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 
-export function OnboardingForm({ site, user }: { site: string; user: User }) {
+export function OnboardingForm({
+  site,
+  clubId,
+  user,
+}: {
+  site: string;
+  clubId: string | null;
+  user: User;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,29 +43,77 @@ export function OnboardingForm({ site, user }: { site: string; user: User }) {
     const supabase = createClient();
 
     try {
-      // Insert member profile into database
-      const { error: insertError } = await supabase.from("members").insert({
-        user_id: user.id,
-        email: user.email,
-        first_name: formData.get("firstName") as string,
-        last_name: formData.get("lastName") as string,
-        phone: formData.get("phone") as string,
-        bio: formData.get("bio") as string,
-        city: formData.get("city") as string,
-        state: formData.get("state") as string,
-      });
+      let photoUrl: string | null = null;
 
-      if (insertError) {
-        throw insertError;
+      if (avatarFile && clubId) {
+        const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
+        const fileName = `${user.id}-avatar-${Date.now()}.${ext}`;
+        const filePath = `${clubId}/photos/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("waiver-submissions")
+          .upload(filePath, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type,
+          });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage
+          .from("waiver-submissions")
+          .getPublicUrl(filePath);
+        photoUrl = publicUrl ?? null;
       }
 
-      // Redirect to club home page after successful onboarding
+      if (!clubId) {
+        throw new Error("Club not found. Please try again from the club signup link.");
+      }
+
+      const firstName = (formData.get("firstName") as string)?.trim() ?? "";
+      const lastName = (formData.get("lastName") as string)?.trim() ?? "";
+      const name = [firstName, lastName].filter(Boolean).join(" ") || null;
+      const phone = (formData.get("phone") as string)?.trim() || null;
+
+      const payload = {
+        name,
+        email: user.email ?? null,
+        phone,
+        avatar_url: photoUrl ?? null,
+      };
+
+      const { data: existing } = await supabase
+        .from("memberships")
+        .select("id")
+        .eq("club_id", clubId)
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error: updateError } = await supabase
+          .from("memberships")
+          .update(payload)
+          .eq("id", existing.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from("memberships").insert({
+          club_id: clubId,
+          auth_user_id: user.id,
+          ...payload,
+        });
+        if (insertError) throw insertError;
+      }
+
       router.push("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setLoading(false);
     }
+  }
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
   }
 
   return (
@@ -62,6 +128,34 @@ export function OnboardingForm({ site, user }: { site: string; user: User }) {
               {error}
             </div>
           )}
+
+          <div className="flex flex-col items-center gap-4">
+            <Label className="text-sm font-medium">Profile photo</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="rounded-full ring-2 ring-muted-foreground/20 transition hover:ring-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <Avatar className="size-24">
+                <AvatarImage src={avatarPreview ?? undefined} alt="Avatar" />
+                <AvatarFallback className="text-2xl">
+                  <Upload className="h-10 w-10 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Click to upload a photo. Optional.
+            </p>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -98,55 +192,12 @@ export function OnboardingForm({ site, user }: { site: string; user: User }) {
               disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
-              Optional. We'll only use this for important club updates.
+              Optional. We&apos;ll only use this for important club updates.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                placeholder="Austin"
-                disabled={loading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                name="state"
-                placeholder="TX"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">About you</Label>
-            <Textarea
-              id="bio"
-              name="bio"
-              placeholder="Tell us a bit about yourself... What brings you to this club?"
-              rows={4}
-              disabled={loading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Optional. Share your running experience, goals, or interests.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/")}
-              disabled={loading}
-            >
-              Skip for now
-            </Button>
-            <Button type="submit" disabled={loading} className="sm:px-8">
+          <div className="pt-4">
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto sm:px-8">
               {loading ? "Saving..." : "Complete profile"}
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Instagram } from "lucide-react";
 
@@ -11,6 +12,8 @@ function instagramUrl(handleOrUrl: string) {
 
 export function ClubFooter({
   club,
+  hasPolicy = false,
+  policyHref = "/policy",
 }: {
   club?: {
     name?: string | null;
@@ -19,6 +22,8 @@ export function ClubFooter({
     contact_email?: string | null;
     email?: string | null;
   };
+  hasPolicy?: boolean;
+  policyHref?: string;
 }) {
   const clubName = (club?.name ?? "").trim() || "ClubPack Club Site";
   const tagline =
@@ -37,8 +42,16 @@ export function ClubFooter({
             </p>
           </div>
 
-          {ig && (
-            <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm">
+            {hasPolicy && (
+              <Link
+                href={policyHref}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Club policy
+              </Link>
+            )}
+            {ig && (
               <a
                 href={ig}
                 target="_blank"
@@ -48,8 +61,8 @@ export function ClubFooter({
               >
                 <Instagram className="size-5" />
               </a>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <Separator className="my-8" />

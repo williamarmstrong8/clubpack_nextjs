@@ -33,6 +33,33 @@ export async function updateClubProfile(input: {
   revalidatePath("/settings")
 }
 
+export async function upsertClubPolicy(content: string) {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return
+
+  const supabase = await createClient()
+  const { data: existing } = await supabase
+    .from("club_policy")
+    .select("id")
+    .eq("club_id", profile.club_id)
+    .maybeSingle()
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("club_policy")
+      .update({ content: content.trim() || null, updated_at: new Date().toISOString() })
+      .eq("id", existing.id)
+    if (error) throw new Error(error.message)
+  } else {
+    const { error } = await supabase.from("club_policy").insert({
+      club_id: profile.club_id,
+      content: content.trim() || null,
+    })
+    if (error) throw new Error(error.message)
+  }
+  revalidatePath("/settings")
+}
+
 export async function updateSettingsPreferences(input: {
   show_event_calendar: boolean
   show_contact_page: boolean

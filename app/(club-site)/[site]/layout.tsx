@@ -25,9 +25,30 @@ export default async function ClubTenantLayout({
 
   const primaryColor = (typeof club.primary_color === "string" && club.primary_color) || null
 
-  // Get current user
+  // Get current user and their membership avatar; check if club has a policy for footer
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  let memberAvatarUrl: string | null = null
+  let hasPolicy = false
+  if (user?.id && club?.id) {
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("avatar_url")
+      .eq("club_id", club.id)
+      .eq("auth_user_id", user.id)
+      .maybeSingle()
+    memberAvatarUrl = (membership as { avatar_url?: string | null } | null)?.avatar_url ?? null
+  }
+  if (club?.id) {
+    const { data: policyRow } = await supabase
+      .from("club_policy")
+      .select("id, content")
+      .eq("club_id", club.id)
+      .limit(1)
+      .maybeSingle()
+    const policy = policyRow as { id: string; content?: string | null } | null
+    hasPolicy = !!(policy?.id && policy?.content?.trim())
+  }
 
   return (
     <>
@@ -46,6 +67,7 @@ export default async function ClubTenantLayout({
           clubName={(club.name ?? "").toString()} 
           clubLogo={clubLogo}
           user={user}
+          memberAvatarUrl={memberAvatarUrl}
         />
         <main>{children}</main>
         <ClubFooter
@@ -55,6 +77,8 @@ export default async function ClubTenantLayout({
             instagram: (club.instagram ?? "").toString(),
             contact_email: (club.contact_email ?? club.email ?? "").toString(),
           }}
+          hasPolicy={hasPolicy}
+          policyHref={`/${encodeURIComponent(site)}/policy`}
         />
       </div>
     </>

@@ -127,8 +127,9 @@ export async function proxy(req: NextRequest) {
       return withSupabaseCookies(NextResponse.redirect(loginUrl));
     }
 
-    // If already logged in, keep users out of auth pages.
-    if (userId && isAuthRoute) {
+    // If already logged in, keep users out of login/sign-up (but allow /auth/create-club).
+    const isCreateClubRoute = path === "/auth/create-club" || path.startsWith("/auth/create-club/");
+    if (userId && isAuthRoute && !isCreateClubRoute) {
       const homeUrl = req.nextUrl.clone();
       homeUrl.pathname = "/home";
       return withSupabaseCookies(NextResponse.redirect(homeUrl));

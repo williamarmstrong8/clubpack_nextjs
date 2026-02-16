@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-import { updateClubProfile } from "./actions"
+import { updateClubProfile, upsertClubPolicy } from "./actions"
 
 export function SettingsClient({
   initial,
@@ -23,11 +23,14 @@ export function SettingsClient({
       meeting_time: string
       description: string
     }
+    clubPolicyContent: string
   }
 }) {
   const [isPending, startTransition] = React.useTransition()
+  const [policyPending, setPolicyPending] = React.useState(false)
 
   const [club, setClub] = React.useState(initial.club)
+  const [clubPolicyContent, setClubPolicyContent] = React.useState(initial.clubPolicyContent)
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -119,6 +122,43 @@ export function SettingsClient({
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Club policy</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Policy text shown on your club site. Leave empty to hide the policy page and footer link.
+            </p>
+          </div>
+          <Button
+            disabled={policyPending}
+            onClick={() => {
+              setPolicyPending(true)
+              startTransition(async () => {
+                await upsertClubPolicy(clubPolicyContent)
+                setPolicyPending(false)
+              })
+            }}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {policyPending ? "Saving..." : "Save policy"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="clubPolicy" className="sr-only">
+            Club policy content
+          </Label>
+          <Textarea
+            id="clubPolicy"
+            rows={12}
+            placeholder="Paste or type your club policy here..."
+            value={clubPolicyContent}
+            onChange={(e) => setClubPolicyContent(e.target.value)}
+            className="font-mono text-sm"
+          />
         </CardContent>
       </Card>
     </div>

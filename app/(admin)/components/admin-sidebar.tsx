@@ -20,7 +20,6 @@ import {
 
 import {
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -84,7 +83,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
                   isActive={active}
                   tooltip={item.label}
                 >
-                  <Link href={item.href}>
+                  <Link href={item.href} prefetch={true}>
                     <Icon />
                     <span>{item.label}</span>
                   </Link>
@@ -104,6 +103,7 @@ export function AdminSidebar() {
       <SidebarHeader className="py-3">
         <Link
           href="/home"
+          prefetch={true}
           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-semibold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center min-h-8 min-w-8">
@@ -129,20 +129,6 @@ export function AdminSidebar() {
         <NavGroup label="Admin" items={admin} />
       </SidebarContent>
 
-      <SidebarSeparator />
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Community">
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                <Users />
-                <span>Community</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </>
   )
 }

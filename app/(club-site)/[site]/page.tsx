@@ -133,12 +133,16 @@ export default async function ClubSiteHomePage({
 
   const events = await getUpcomingEventsByClubId(club.id, 6)
 
+  const rawDescription = clubDescriptionFromRow(club)
+  const defaultAbout =
+    "We're a community that gets together regularly to connect, learn, and have a good time. Whether you're new in town or looking to meet others who share your interests, you're in the right place. Join us at an upcoming event, we'd love to meet you."
+
   const clubData: ClubData = {
     name: clubNameFromRow(club, site),
     location: clubLocationFromRow(club),
     tagline: (club.tagline ?? club.hero_subtext ?? "").toString().trim(),
     heroImage: clubHeroImageFromRow(club),
-    description: clubDescriptionFromRow(club),
+    description: rawDescription || defaultAbout,
   }
 
   const upcomingEvents: ClubEvent[] = events.map(toClubEvent)
@@ -147,8 +151,8 @@ export default async function ClubSiteHomePage({
   const faqRows = await getFaqsByClubId(club.id)
   const defaultFaqs: Array<{ question: string; answer: string }> = [
     { question: "Do I need to sign up in advance?", answer: "RSVP helps us plan, but you can always show up! We welcome drop-ins. Just come a few minutes early to say hi." },
-    { question: "What pace do you run?", answer: "We have a mix of paces — we regroup often so no one gets left behind. All levels are welcome, from walkers to seasoned runners." },
-    { question: "What should I bring?", answer: "Bring water, wear comfortable shoes, and dress for the weather. If it's dark, reflective gear or a headlamp is recommended." },
+    { question: "Who can join?", answer: "Everyone is welcome. Our community is open to all — come as you are and get involved at your own pace." },
+    { question: "What should I expect at my first event?", answer: "Introduce yourself when you arrive. We'll make sure you feel welcome and help you connect with others." },
     { question: "Is there a fee to join?", answer: "Nope — we're free and open to everyone. Just show up and enjoy the community." },
   ]
 

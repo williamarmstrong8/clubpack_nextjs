@@ -30,11 +30,14 @@ export default async function SettingsPage() {
   const supabase = await createClient()
   const clubId = profile.club_id
 
-  const clubRes = await supabase
-    .from("clubs")
-    .select("name, email, phone_number, meeting_location, meeting_time, description")
-    .eq("id", clubId)
-    .single()
+  const [clubRes, policyRes] = await Promise.all([
+    supabase
+      .from("clubs")
+      .select("name, email, phone_number, meeting_location, meeting_time, description")
+      .eq("id", clubId)
+      .single(),
+    supabase.from("club_policy").select("id, content").eq("club_id", clubId).maybeSingle(),
+  ])
 
   if (clubRes.error || !clubRes.data) {
     return (
@@ -48,6 +51,7 @@ export default async function SettingsPage() {
   }
 
   const club = clubRes.data as ClubRow
+  const policy = policyRes.data as { id: string; content: string | null } | null
 
   return (
     <SettingsClient
@@ -60,6 +64,7 @@ export default async function SettingsPage() {
           meeting_time: club.meeting_time ?? "",
           description: club.description ?? "",
         },
+        clubPolicyContent: policy?.content ?? "",
       }}
     />
   )

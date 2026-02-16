@@ -38,7 +38,7 @@ export function SignUpForm() {
         email,
         password,
         options: origin
-          ? { emailRedirectTo: `${origin}/auth/confirm?next=/home` }
+          ? { emailRedirectTo: `${origin}/auth/confirm?next=/auth/create-club` }
           : undefined,
       })
       if (error) throw error
@@ -87,7 +87,7 @@ export function SignUpForm() {
         }
       }
 
-      router.push("/home")
+      router.push("/auth/create-club")
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign up failed")

@@ -27,7 +27,7 @@ export default async function MembersPage() {
     await Promise.all([
       supabase
         .from("memberships")
-        .select("id, name, email, joined_at, status, avatar_url")
+        .select("id, name, email, joined_at, avatar_url, phone")
         .eq("club_id", profile.club_id)
         .order("joined_at", { ascending: false }),
       supabase

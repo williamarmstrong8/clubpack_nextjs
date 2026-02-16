@@ -4,10 +4,18 @@ import type { NextConfig } from "next"
 const appDir = path.resolve(__dirname)
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: appDir,
-  },
   outputFileTracingRoot: appDir,
+  // Next.js 16 uses Turbopack by default; empty config acknowledges we're ok with that
+  // (custom webpack above is for workspace resolution and may not apply to Turbopack).
+  turbopack: {},
+  experimental: {
+    // Cache visited admin (and other dynamic) pages on the client so navigating
+    // between them doesn't refetch until stale (5 min).
+    staleTimes: {
+      dynamic: 300,
+      static: 300,
+    },
+  },
   images: {
     // Allow Supabase Storage signed/public URLs for club hero images.
     remotePatterns: [
@@ -17,13 +25,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Pin resolution to this app so "tailwindcss" and other deps resolve from clubpack-nextjs/node_modules
-  // when the toolchain runs with a parent workspace root (e.g. CLUBPACK WORKSPACE).
+  // Resolve from app node_modules first, then parent workspace (for hoisted deps).
   webpack: (config) => {
     config.resolve ??= {}
+    const existing = Array.isArray(config.resolve.modules) ? config.resolve.modules : ["node_modules"]
     config.resolve.modules = [
       path.join(appDir, "node_modules"),
-      ...(Array.isArray(config.resolve.modules) ? config.resolve.modules : ["node_modules"]),
+      path.join(appDir, "..", "node_modules"),
+      ...existing,
     ]
     return config
   },

@@ -34,14 +34,14 @@ export default async function ClubLoginPage({
             <Image
               src={clubLogo}
               alt={`${clubName} logo`}
-              width={64}
-              height={64}
-              className="size-16 rounded-xl object-cover"
+              width={120}
+              height={48}
+              className="h-12 w-auto max-h-16 object-contain"
             />
           ) : (
-            <div className="inline-flex size-16 items-center justify-center rounded-xl bg-primary text-primary-foreground text-2xl font-bold">
+            <span className="text-2xl font-bold text-foreground">
               {initials}
-            </div>
+            </span>
           )}
         </div>
         <LoginForm site={site} />
