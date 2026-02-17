@@ -3,6 +3,8 @@ import type { ReactNode } from "react"
 
 import { getClubBySubdomain } from "@/lib/data/club-site"
 
+import { PageViewTracker } from "../../components/page-view-tracker"
+
 export async function generateMetadata({
   params,
 }: {
@@ -22,10 +24,18 @@ export async function generateMetadata({
   }
 }
 
-export default function AuthSiteLayout({
+export default async function AuthSiteLayout({
   children,
+  params,
 }: {
   children: ReactNode
+  params: Promise<{ site: string }>
 }) {
-  return <>{children}</>
+  const { site } = await params
+  return (
+    <>
+      <PageViewTracker site={site} />
+      {children}
+    </>
+  )
 }

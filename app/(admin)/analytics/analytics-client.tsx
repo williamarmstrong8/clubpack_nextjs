@@ -61,10 +61,13 @@ export function AnalyticsClient({
     rsvpsDelta7: number
     messagesLast30: number
     upcomingEvents: number
+    websiteViewsLast7: number
+    websiteViewsLast30: number
   }
   charts: {
     membersDaily: DailyCount[]
     rsvpsDaily: DailyCount[]
+    websiteViewsDaily: DailyCount[]
   }
 }) {
   return (
@@ -120,6 +123,28 @@ export function AnalyticsClient({
             <div className="text-3xl font-semibold">{stats.messagesLast30}</div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Website views (7d)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold">{stats.websiteViewsLast7}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Website views (30d)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold">{stats.websiteViewsLast30}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -147,6 +172,20 @@ export function AnalyticsClient({
             </div>
             <p className="text-xs text-muted-foreground">
               Helps you spot spikes around event announcements.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Website views (last 30 days)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="min-h-[12rem]">
+              <MiniBars data={charts.websiteViewsDaily} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Page loads on your club site (home, events, contact, etc.).
             </p>
           </CardContent>
         </Card>

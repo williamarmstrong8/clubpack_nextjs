@@ -65,6 +65,9 @@ export default async function AnalyticsPage() {
     eventsUpcomingRes,
     membersJoinedRows,
     rsvpsCreatedRows,
+    websiteViewsLast7Res,
+    websiteViewsLast30Res,
+    websiteViewsRows,
   ] = await Promise.all([
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("club_id", clubId),
     supabase
@@ -109,6 +112,21 @@ export default async function AnalyticsPage() {
       .select("created_at")
       .eq("club_id", clubId)
       .gte("created_at", thirtyDaysAgo),
+    supabase
+      .from("club_website_views")
+      .select("id", { count: "exact", head: true })
+      .eq("club_id", clubId)
+      .gte("viewed_at", sevenDaysAgo),
+    supabase
+      .from("club_website_views")
+      .select("id", { count: "exact", head: true })
+      .eq("club_id", clubId)
+      .gte("viewed_at", thirtyDaysAgo),
+    supabase
+      .from("club_website_views")
+      .select("viewed_at")
+      .eq("club_id", clubId)
+      .gte("viewed_at", thirtyDaysAgo),
   ])
 
   const membersTotal = membersTotalRes.count ?? 0
@@ -122,6 +140,8 @@ export default async function AnalyticsPage() {
 
   const messagesLast30 = messagesLast30Res.count ?? 0
   const upcomingEvents = eventsUpcomingRes.count ?? 0
+  const websiteViewsLast7 = websiteViewsLast7Res.count ?? 0
+  const websiteViewsLast30 = websiteViewsLast30Res.count ?? 0
 
   // 30-day mini “charts” (daily bars)
   const joinBins = buildDayBins(30)
@@ -140,6 +160,14 @@ export default async function AnalyticsPage() {
     if (idx >= 0) rsvpBins.bins[idx]!.count += 1
   })
 
+  const websiteViewBins = buildDayBins(30)
+  ;((websiteViewsRows.data ?? []) as Array<{ viewed_at: string | null }>).forEach((r) => {
+    if (!r.viewed_at) return
+    const d = isoDateOnly(new Date(r.viewed_at))
+    const idx = websiteViewBins.bins.findIndex((b) => b.date === d)
+    if (idx >= 0) websiteViewBins.bins[idx]!.count += 1
+  })
+
   return (
     <AnalyticsClient
       stats={{
@@ -150,10 +178,13 @@ export default async function AnalyticsPage() {
         rsvpsDelta7,
         messagesLast30,
         upcomingEvents,
+        websiteViewsLast7,
+        websiteViewsLast30,
       }}
       charts={{
         membersDaily: joinBins.bins,
         rsvpsDaily: rsvpBins.bins,
+        websiteViewsDaily: websiteViewBins.bins,
       }}
     />
   )

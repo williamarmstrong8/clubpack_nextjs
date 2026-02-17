@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 
 import { ClubFooter } from "../components/club-footer"
 import { ClubNavbar } from "../components/club-navbar"
+import { PageViewTracker } from "../components/page-view-tracker"
 
 export async function generateMetadata({
   params,
@@ -81,6 +82,7 @@ export default async function ClubTenantLayout({
           `
         }} />
       )}
+      <PageViewTracker site={site} />
       <div className="relative min-h-dvh bg-background text-foreground">
         <ClubNavbar 
           site={site} 
