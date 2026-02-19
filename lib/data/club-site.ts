@@ -10,6 +10,7 @@ export type ClubRow = {
   name?: string | null
   description?: string | null
   location?: string | null
+  meeting_location?: string | null
   tagline?: string | null
   hero_image?: string | null
   hero_image_url?: string | null

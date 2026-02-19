@@ -69,20 +69,56 @@ export default async function EventPage({
     (typeof event.event_image === "string" && event.event_image) ||
     "/club-photos/happy-group.webp";
 
-  const [rsvps, requireLoginToRsvp, membership, existingRsvp] = await Promise.all([
+  const [rsvps, requireLoginToRsvp, waiverRequireRsvp, authAndMembership, existingRsvp] = await Promise.all([
     getRsvpsForEvent(club.id, event.id),
     getRequireLoginToRsvp(club.id),
     (async () => {
       const supabase = await createClient();
+      const { data } = await supabase
+        .from("waiver_settings")
+        .select("is_enabled, require_rsvp, require_photo")
+        .eq("club_id", club.id)
+        .maybeSingle();
+      const ws = data as { is_enabled?: boolean; require_rsvp?: boolean; require_photo?: boolean } | null;
+      return {
+        requireWaiver: !!(ws?.is_enabled && ws?.require_rsvp),
+        requirePhoto: !!(ws?.is_enabled && ws?.require_rsvp && ws?.require_photo),
+      };
+    })(),
+    (async () => {
+      const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return { user: null, membership: null, hasWaiverFromSubmissions: false, hasPhotoFromSubmissions: false };
       const { data } = await supabase
         .from("memberships")
-        .select("id")
+        .select("id, waiver_url")
         .eq("club_id", club.id)
         .eq("auth_user_id", user.id)
         .maybeSingle();
-      return data as { id: string } | null;
+      const membership = data as { id: string; waiver_url?: string | null } | null;
+      let hasWaiverFromSubmissions = false;
+      let hasPhotoFromSubmissions = false;
+      if (membership?.id) {
+        const [waiverSub, photoSub] = await Promise.all([
+          supabase
+            .from("waiver_submissions")
+            .select("id")
+            .eq("membership_id", membership.id)
+            .not("submitted_waiver_url", "is", null)
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("waiver_submissions")
+            .select("id")
+            .eq("membership_id", membership.id)
+            .not("photo_url", "is", null)
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        hasWaiverFromSubmissions = !!waiverSub.data;
+        hasPhotoFromSubmissions = !!photoSub.data;
+      }
+      return { user, membership, hasWaiverFromSubmissions, hasPhotoFromSubmissions };
     })(),
     (async () => {
       const supabase = await createClient();
@@ -176,7 +212,12 @@ export default async function EventPage({
             maxAttendees={maxAttendees}
             rsvpOpenTime={event.rsvp_open_time ?? null}
             requireLoginToRsvp={requireLoginToRsvp}
-            isLoggedIn={!!membership}
+            requireWaiverToRsvp={waiverRequireRsvp.requireWaiver}
+            hasUploadedWaiver={
+              (!!(authAndMembership.membership?.waiver_url?.trim()) || authAndMembership.hasWaiverFromSubmissions) &&
+              (!waiverRequireRsvp.requirePhoto || authAndMembership.hasPhotoFromSubmissions)
+            }
+            isLoggedIn={!!authAndMembership.user}
             alreadyRsvped={existingRsvp}
             eventDetails={{
               title: event.title ?? null,

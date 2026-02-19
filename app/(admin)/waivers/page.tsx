@@ -19,6 +19,7 @@ type WaiverSubmissionRow = {
   full_name: string | null
   email: string | null
   photo_url: string | null
+  membership_avatar_url: string | null
 }
 
 export default async function WaiversPage() {
@@ -46,13 +47,35 @@ export default async function WaiversPage() {
       .maybeSingle(),
     supabase
       .from("waiver_submissions")
-      .select("id, created_at, membership_id, submitted_waiver_url, full_name, email, photo_url")
+      .select("id, created_at, membership_id, submitted_waiver_url, full_name, email, photo_url, memberships(avatar_url)")
       .eq("club_id", clubId)
       .order("created_at", { ascending: false }),
   ])
 
   const settings = (settingsRes.data as WaiverSettingsRow | null) ?? null
-  const submissions = ((submissionsRes.data ?? []) as WaiverSubmissionRow[]) ?? []
+  const rawSubmissions = (submissionsRes.data ?? []) as Array<{
+    id: string
+    created_at: string | null
+    membership_id: string | null
+    submitted_waiver_url: string | null
+    full_name: string | null
+    email: string | null
+    photo_url: string | null
+    memberships?: { avatar_url: string | null } | { avatar_url: string | null }[] | null
+  }>
+  const submissions: WaiverSubmissionRow[] = rawSubmissions.map((s) => {
+    const member = Array.isArray(s.memberships) ? s.memberships[0] : s.memberships
+    return {
+      id: s.id,
+      created_at: s.created_at,
+      membership_id: s.membership_id,
+      submitted_waiver_url: s.submitted_waiver_url,
+      full_name: s.full_name,
+      email: s.email,
+      photo_url: s.photo_url,
+      membership_avatar_url: member?.avatar_url ?? null,
+    }
+  })
 
   return (
     <WaiversClient

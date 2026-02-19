@@ -19,13 +19,52 @@ export async function rsvpForEvent(eventId: string, clubId: string, site: string
   // Get membership for this club
   const { data: membership, error: memError } = await supabase
     .from("memberships")
-    .select("id, name, avatar_url")
+    .select("id, name, avatar_url, waiver_url")
     .eq("club_id", cId)
     .eq("auth_user_id", user.id)
     .maybeSingle()
 
   if (memError) return { ok: false, error: "Could not load membership." }
   if (!membership) return { ok: false, error: "You're not a member of this club. Join first to RSVP." }
+
+  // If club requires waiver to RSVP, block until member has uploaded waiver (and photo if required)
+  const { data: waiverSettings } = await supabase
+    .from("waiver_settings")
+    .select("is_enabled, require_rsvp, require_photo")
+    .eq("club_id", cId)
+    .maybeSingle()
+  const ws = waiverSettings as { is_enabled?: boolean; require_rsvp?: boolean; require_photo?: boolean } | null
+  const requireWaiverToRsvp = !!(ws?.is_enabled && ws?.require_rsvp)
+
+  if (requireWaiverToRsvp) {
+    let hasWaiver = !!(membership as { waiver_url?: string | null }).waiver_url?.trim()
+    if (!hasWaiver) {
+      const { data: sub } = await supabase
+        .from("waiver_submissions")
+        .select("id")
+        .eq("membership_id", membership.id)
+        .not("submitted_waiver_url", "is", null)
+        .limit(1)
+        .maybeSingle()
+      hasWaiver = !!sub
+    }
+    if (!hasWaiver) {
+      return { ok: false, error: "Please upload your signed waiver in Account Settings before RSVPing." }
+    }
+
+    if (ws?.require_photo) {
+      const { data: photoSub } = await supabase
+        .from("waiver_submissions")
+        .select("id")
+        .eq("membership_id", membership.id)
+        .not("photo_url", "is", null)
+        .limit(1)
+        .maybeSingle()
+      if (!photoSub) {
+        return { ok: false, error: "Please upload your photo in Account Settings before RSVPing." }
+      }
+    }
+  }
 
   // Already RSVPed?
   const { data: existing } = await supabase

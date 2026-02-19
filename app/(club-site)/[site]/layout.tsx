@@ -24,7 +24,7 @@ export async function generateMetadata({
     null
 
   return {
-    icons: clubLogo ? { icon: clubLogo } : undefined,
+    icons: clubLogo ? { icon: clubLogo } : { icon: "/clubpack-logo-site.png" },
   }
 }
 

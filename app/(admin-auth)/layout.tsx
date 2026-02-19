@@ -5,6 +5,7 @@ export const metadata: Metadata = {
     default: "ClubPack Admin Auth",
     template: "%s | ClubPack",
   },
+  icons: { icon: "/clubpack-logo-site.png" },
   robots: {
     index: false,
     follow: false,

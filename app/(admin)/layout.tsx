@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     default: "ClubPack Admin",
     template: "%s | ClubPack Admin",
   },
+  icons: { icon: "/clubpack-logo-site.png" },
   robots: {
     index: false,
     follow: false,

@@ -16,6 +16,7 @@ export default async function ContactPage({
   const clubName = (club.name ?? club.hero_headline ?? site).toString();
   const contactEmail = (club.contact_email ?? club.email ?? "").toString();
   const location =
+    (typeof club.meeting_location === "string" && club.meeting_location.trim()) ||
     (typeof club.location === "string" && club.location.trim()) ||
     [club.city, club.state].filter(Boolean).join(", ") ||
     "Local";

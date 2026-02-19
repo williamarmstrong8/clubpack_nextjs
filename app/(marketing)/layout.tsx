@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: "%s | ClubPack",
   },
   description: "The all-in-one platform for modern social clubs.",
+  icons: { icon: "/clubpack-logo-site.png" },
 };
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {

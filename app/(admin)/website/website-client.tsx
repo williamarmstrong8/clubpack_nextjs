@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink, ImagePlus, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ChevronDown, ChevronUp, ExternalLink, ImagePlus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   createFaq,
   deleteFaq,
+  reorderFaqs,
   updateClubBranding,
   updateClubSettings,
   updateClubWebsiteContent,
@@ -58,7 +60,27 @@ export function WebsiteClient({
   faqs: FaqRow[]
   rootDomain: string
 }) {
+  const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
+  const [reorderPending, setReorderPending] = React.useState(false)
+
+  const handleMoveFaq = React.useCallback(
+    (id: string, direction: "up" | "down") => {
+      const idx = faqs.findIndex((f) => f.id === id)
+      if (idx === -1) return
+      if (direction === "up" && idx === 0) return
+      if (direction === "down" && idx === faqs.length - 1) return
+      const newOrder = [...faqs]
+      const swap = direction === "up" ? idx - 1 : idx + 1
+      ;[newOrder[idx], newOrder[swap]] = [newOrder[swap], newOrder[idx]]
+      setReorderPending(true)
+      reorderFaqs(newOrder.map((f) => f.id)).then(() => {
+        router.refresh()
+        setReorderPending(false)
+      })
+    },
+    [faqs, router],
+  )
 
   const [featureFlags, setFeatureFlags] = React.useState<ClubSettings>(settings)
 
@@ -476,8 +498,17 @@ export function WebsiteClient({
               </div>
 
               <div className="flex flex-col gap-4">
-                {faqs.map((f) => (
-                  <FaqRowEditor key={f.id} row={f} disabled={isPending} />
+                {faqs.map((f, index) => (
+                  <FaqRowEditor
+                    key={f.id}
+                    row={f}
+                    disabled={isPending}
+                    reorderDisabled={reorderPending}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < faqs.length - 1}
+                    onMoveUp={() => handleMoveFaq(f.id, "up")}
+                    onMoveDown={() => handleMoveFaq(f.id, "down")}
+                  />
                 ))}
                 {faqs.length === 0 ? (
                   <div className="py-10 text-center text-sm text-muted-foreground rounded-lg border border-dashed">
@@ -496,9 +527,19 @@ export function WebsiteClient({
 function FaqRowEditor({
   row,
   disabled,
+  reorderDisabled,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
 }: {
   row: FaqRow
   disabled: boolean
+  reorderDisabled: boolean
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   const [isPending, startTransition] = React.useTransition()
   const [local, setLocal] = React.useState(row)
@@ -522,35 +563,57 @@ function FaqRowEditor({
           disabled={disabled || isPending}
         />
       </div>
-      <div className="flex justify-end gap-2">
-        <Button
-          disabled={disabled || isPending}
-          onClick={() => {
-            startTransition(async () => {
-              await updateFaq({
-                id: row.id,
-                question: local.question,
-                answer: local.answer,
-                order_index: row.order_index,
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={reorderDisabled || !canMoveUp}
+            onClick={onMoveUp}
+            title="Move up"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={reorderDisabled || !canMoveDown}
+            onClick={onMoveDown}
+            title="Move down"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            disabled={disabled || isPending}
+            onClick={() => {
+              startTransition(async () => {
+                await updateFaq({
+                  id: row.id,
+                  question: local.question,
+                  answer: local.answer,
+                  order_index: row.order_index,
+                })
               })
-            })
-          }}
-        >
-          {isPending ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          variant="destructive"
-          size="icon"
-          disabled={disabled || isPending}
-          onClick={() => {
-            startTransition(async () => {
-              await deleteFaq(row.id)
-            })
-          }}
-          title="Delete"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+            }}
+          >
+            {isPending ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            variant="destructive"
+            size="icon"
+            disabled={disabled || isPending}
+            onClick={() => {
+              startTransition(async () => {
+                await deleteFaq(row.id)
+              })
+            }}
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )

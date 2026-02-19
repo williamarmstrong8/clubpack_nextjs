@@ -65,7 +65,7 @@ export function SignupForm({ site }: { site: string }) {
               <Input
                 id="firstName"
                 name="firstName"
-                placeholder="William"
+                placeholder="First name"
                 required
                 disabled={loading}
               />
@@ -75,7 +75,7 @@ export function SignupForm({ site }: { site: string }) {
               <Input
                 id="lastName"
                 name="lastName"
-                placeholder="Armstrong"
+                placeholder="Last name"
                 required
                 disabled={loading}
               />

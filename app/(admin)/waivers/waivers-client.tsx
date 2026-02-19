@@ -1,10 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink, FileUp, Save } from "lucide-react"
+import { Download, ExternalLink, FileText, FileUp, ImageIcon, Save } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -25,6 +32,7 @@ type WaiverSubmissionRow = {
   full_name: string | null
   email: string | null
   photo_url: string | null
+  membership_avatar_url: string | null
 }
 
 export function WaiversClient({
@@ -45,6 +53,7 @@ export function WaiversClient({
   const [templateFile, setTemplateFile] = React.useState<File | null>(null)
   const [showUploadWaiver, setShowUploadWaiver] = React.useState(false)
   const [submissionsPage, setSubmissionsPage] = React.useState(1)
+  const [selectedSubmission, setSelectedSubmission] = React.useState<WaiverSubmissionRow | null>(null)
 
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(initial.submissions.length / pageSize))
@@ -226,8 +235,23 @@ export function WaiversClient({
               <TableBody>
                 {paginatedSubmissions.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium">
-                      {s.full_name ?? "—"}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9 shrink-0">
+                          {s.membership_avatar_url ? (
+                            <AvatarImage src={s.membership_avatar_url} alt="" />
+                          ) : null}
+                          <AvatarFallback className="text-xs">
+                            {(s.full_name ?? "?")
+                              .split(/\s+/)
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase() || "—"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{s.full_name ?? "—"}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {s.email ?? "—"}
@@ -236,26 +260,17 @@ export function WaiversClient({
                       {s.created_at ? new Date(s.created_at).toLocaleString() : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="inline-flex items-center justify-end gap-2">
-                        {s.submitted_waiver_url ? (
-                          <Button asChild variant="outline" size="sm">
-                            <a
-                              href={s.submitted_waiver_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Waiver
-                            </a>
-                          </Button>
-                        ) : null}
-                        {s.photo_url ? (
-                          <Button asChild variant="outline" size="sm">
-                            <a href={s.photo_url} target="_blank" rel="noreferrer">
-                              Photo
-                            </a>
-                          </Button>
-                        ) : null}
-                      </div>
+                      {(s.submitted_waiver_url || s.photo_url) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedSubmission(s)}
+                        >
+                          View & download
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -300,6 +315,101 @@ export function WaiversClient({
           ) : null}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSubmission ? (
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-10 shrink-0">
+                    {selectedSubmission.membership_avatar_url ? (
+                      <AvatarImage src={selectedSubmission.membership_avatar_url} alt="" />
+                    ) : null}
+                    <AvatarFallback>
+                      {(selectedSubmission.full_name ?? "?")
+                        .split(/\s+/)
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase() || "—"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-semibold">{selectedSubmission.full_name ?? "—"}</div>
+                    {selectedSubmission.email ? (
+                      <div className="text-sm font-normal text-muted-foreground">{selectedSubmission.email}</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                "Submission"
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedSubmission ? (
+            <div className="grid gap-4">
+              {selectedSubmission.submitted_waiver_url ? (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <FileText className="size-4" />
+                    Signed waiver
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <a href={selectedSubmission.submitted_waiver_url} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-2 size-4" />
+                        Open in new tab
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <a href={selectedSubmission.submitted_waiver_url} download>
+                        <Download className="mr-2 size-4" />
+                        Download
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              {selectedSubmission.photo_url ? (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ImageIcon className="size-4" />
+                    Photo
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <div className="relative aspect-square max-h-48 w-full overflow-hidden rounded-md border bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={selectedSubmission.photo_url}
+                        alt="Submission photo"
+                        className="object-contain size-full"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <a href={selectedSubmission.photo_url} target="_blank" rel="noreferrer">
+                          <ExternalLink className="mr-2 size-4" />
+                          Open in new tab
+                        </a>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <a href={selectedSubmission.photo_url} download>
+                          <Download className="mr-2 size-4" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {!selectedSubmission.submitted_waiver_url && !selectedSubmission.photo_url ? (
+                <p className="text-sm text-muted-foreground">No files for this submission.</p>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

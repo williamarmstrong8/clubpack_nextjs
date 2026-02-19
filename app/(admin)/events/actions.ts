@@ -202,3 +202,21 @@ export async function getEventRsvps(eventId: string): Promise<EventRsvpForView[]
   return getRsvpsForEvent(profile.club_id, eventId)
 }
 
+export type DeleteRsvpResult = { ok: true } | { ok: false; error: string }
+
+export async function deleteRsvp(rsvpId: string): Promise<DeleteRsvpResult> {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return { ok: false, error: "Not authorized." }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("rsvps")
+    .delete()
+    .eq("id", rsvpId)
+    .eq("club_id", profile.club_id)
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath("/events")
+  return { ok: true }
+}
+

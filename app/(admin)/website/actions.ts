@@ -219,3 +219,21 @@ export async function deleteFaq(id: string) {
   revalidatePath("/settings/website")
 }
 
+/** Reorder FAQs by setting order_index to each id's position in orderedIds. */
+export async function reorderFaqs(orderedIds: string[]) {
+  const { profile } = await getAdminContext()
+  if (!profile.club_id) return
+
+  const supabase = await createClient()
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from("faqs")
+      .update({ order_index: i })
+      .eq("id", orderedIds[i])
+      .eq("club_id", profile.club_id)
+    if (error) throw new Error(error.message)
+  }
+  revalidatePath("/website")
+  revalidatePath("/settings/website")
+}
+

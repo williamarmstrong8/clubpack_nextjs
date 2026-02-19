@@ -48,7 +48,7 @@ export function OnboardingForm({
       if (avatarFile && clubId) {
         const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
         const fileName = `${user.id}-avatar-${Date.now()}.${ext}`;
-        const filePath = `${clubId}/photos/${fileName}`;
+        const filePath = `${clubId}/${user.id}/photos/${fileName}`;
         const { error: uploadError } = await supabase.storage
           .from("waiver-submissions")
           .upload(filePath, avatarFile, {
@@ -163,7 +163,7 @@ export function OnboardingForm({
               <Input
                 id="firstName"
                 name="firstName"
-                placeholder="William"
+                placeholder="First name"
                 required
                 disabled={loading}
                 defaultValue={user.user_metadata?.first_name}
@@ -174,7 +174,7 @@ export function OnboardingForm({
               <Input
                 id="lastName"
                 name="lastName"
-                placeholder="Armstrong"
+                placeholder="Last name"
                 required
                 disabled={loading}
                 defaultValue={user.user_metadata?.last_name}

@@ -52,6 +52,10 @@ type Props = {
   /** When set and current time is before this, RSVPs are disabled */
   rsvpOpenTime: string | null
   requireLoginToRsvp: boolean
+  /** When true, member must have uploaded waiver in account settings before they can RSVP */
+  requireWaiverToRsvp: boolean
+  /** When true, current user has uploaded their waiver */
+  hasUploadedWaiver: boolean
   isLoggedIn: boolean
   alreadyRsvped: boolean
   /** When set, the RSVP-success modal can show event details and Add to Google Calendar */
@@ -93,6 +97,8 @@ export function EventRsvpCard({
   maxAttendees,
   rsvpOpenTime,
   requireLoginToRsvp,
+  requireWaiverToRsvp,
+  hasUploadedWaiver,
   isLoggedIn,
   alreadyRsvped,
   eventDetails,
@@ -108,10 +114,11 @@ export function EventRsvpCard({
     new Date() < new Date(rsvpOpenTime)
 
   const atCapacity = typeof maxAttendees === "number" && rsvps.length >= maxAttendees
-  const canRsvp = isLoggedIn && !alreadyRsvped && !atCapacity && !rsvpNotYetOpen
+  const mustSignWaiverFirst = isLoggedIn && requireWaiverToRsvp && !hasUploadedWaiver
+  const canRsvp = isLoggedIn && !alreadyRsvped && !atCapacity && !rsvpNotYetOpen && !mustSignWaiverFirst
 
   function handleRsvp() {
-    if (!isLoggedIn || alreadyRsvped || atCapacity || rsvpNotYetOpen) return
+    if (!isLoggedIn || alreadyRsvped || atCapacity || rsvpNotYetOpen || mustSignWaiverFirst) return
     setMessage(null)
     startTransition(async () => {
       const result: RsvpResult = await rsvpForEvent(eventId, clubId, site)
@@ -189,7 +196,20 @@ export function EventRsvpCard({
           <p className="text-sm text-gray-600">This event is full.</p>
         )}
 
-        {!alreadyRsvped && !atCapacity && !rsvpNotYetOpen && (
+        {mustSignWaiverFirst && (
+          <div className="space-y-2">
+            <Button asChild className="w-full rounded-none bg-amber-600 text-white hover:bg-amber-700" size="lg">
+              <Link href="/account">
+                Complete waiver to RSVP
+              </Link>
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Upload your signed waiver in Account Settings to RSVP.
+            </p>
+          </div>
+        )}
+
+        {!alreadyRsvped && !atCapacity && !rsvpNotYetOpen && !mustSignWaiverFirst && (
           <>
             {requireLoginToRsvp && !isLoggedIn ? (
               <Button asChild className="w-full rounded-none bg-primary hover:bg-primary/90" size="lg">

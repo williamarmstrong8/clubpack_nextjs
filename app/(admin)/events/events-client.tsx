@@ -33,7 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
 import { cn } from "@/lib/utils"
-import { getEventRsvps, updateEvent, deleteEvent, type EventRsvpForView } from "./actions"
+import { getEventRsvps, updateEvent, deleteEvent, deleteRsvp, type EventRsvpForView } from "./actions"
 import { CreateEventDialog } from "./create-event-dialog"
 
 function initials(name: string | null): string {
@@ -163,18 +163,21 @@ function eventDateTime(e: Pick<EventRow, "event_date" | "event_time">) {
   return dt
 }
 
-function badgeForEvent(e: EventRow) {
+function isEventPast(e: EventRow): boolean {
   const date = e.event_date ?? ""
-  const status = (e.status ?? "").toLowerCase()
-  const cancelled = status === "cancelled" || status === "canceled"
-
   const eventDate = date ? new Date(`${date}T00:00:00`) : null
   const today = new Date()
-  const isPast = eventDate ? eventDate < new Date(today.toDateString()) : false
+  return eventDate ? eventDate < new Date(today.toDateString()) : false
+}
+
+function badgeForEvent(e: EventRow) {
+  const status = (e.status ?? "").toLowerCase()
+  const cancelled = status === "cancelled" || status === "canceled"
+  const isPast = isEventPast(e)
 
   if (cancelled) return <Badge variant="destructive">Cancelled</Badge>
   if (isPast) return <Badge variant="secondary">Completed</Badge>
-  return <Badge>Upcoming</Badge>
+  return null
 }
 
 export function EventsClient({ events }: { events: EventRow[] }) {
@@ -188,6 +191,7 @@ export function EventsClient({ events }: { events: EventRow[] }) {
   const [editOpen, setEditOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<EventRow | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null)
+  const [deletingRsvpId, setDeletingRsvpId] = React.useState<string | null>(null)
 
   const RSVP_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
   const rsvpCacheRef = React.useRef<
@@ -277,6 +281,21 @@ export function EventsClient({ events }: { events: EventRow[] }) {
       setRsvpsAllOpen(false)
     }
   }, [viewOpen, viewing?.id])
+
+  async function handleDeleteRsvp(rsvpId: string) {
+    setDeletingRsvpId(rsvpId)
+    try {
+      const result = await deleteRsvp(rsvpId)
+      if (result.ok && viewRsvps && viewing) {
+        const next = viewRsvps.filter((r) => r.id !== rsvpId)
+        setViewRsvps(next)
+        rsvpCacheRef.current.set(viewing.id, { data: next, timestamp: Date.now() })
+        router.refresh()
+      }
+    } finally {
+      setDeletingRsvpId(null)
+    }
+  }
 
   const displayRsvps = viewRsvps?.slice(0, 8) ?? []
 
@@ -457,21 +476,37 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                       </>
                     ) : (
                       <>
-                        <div className="flex -space-x-2">
+                        <div className="flex -space-x-2 items-center">
                           {displayRsvps.map((rsvp, index) => (
-                            <Avatar
+                            <div
                               key={rsvp.id}
-                              className="size-9 border-2 border-background"
+                              className="relative group"
                               style={{ zIndex: displayRsvps.length - index }}
                             >
-                              <AvatarImage
-                                src={rsvp.avatar_url ?? undefined}
-                                alt={rsvp.name ?? undefined}
-                              />
-                              <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
-                                {initials(rsvp.name)}
-                              </AvatarFallback>
-                            </Avatar>
+                              <Avatar className="size-9 border-2 border-background">
+                                <AvatarImage
+                                  src={rsvp.avatar_url ?? undefined}
+                                  alt={rsvp.name ?? undefined}
+                                />
+                                <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
+                                  {initials(rsvp.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="absolute -top-1 -right-1 size-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                disabled={deletingRsvpId === rsvp.id}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRsvp(rsvp.id)
+                                }}
+                                title="Remove RSVP"
+                              >
+                                <Trash2 className="size-2.5" />
+                              </Button>
+                            </div>
                           ))}
                         </div>
                         <span className="text-sm text-muted-foreground">
@@ -510,7 +545,8 @@ export function EventsClient({ events }: { events: EventRow[] }) {
               Close
             </Button>
             <Button
-              disabled={!viewing}
+              disabled={!viewing || (viewing ? isEventPast(viewing) : false)}
+              title={viewing && isEventPast(viewing) ? "Past events cannot be edited" : undefined}
               onClick={() => {
                 if (!viewing) return
                 setEditing(viewing)
@@ -592,9 +628,19 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                         {initials(rsvp.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium truncate">
+                    <span className="text-sm font-medium truncate min-w-0 flex-1">
                       {rsvp.name?.trim() || "Guest"}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      disabled={deletingRsvpId === rsvp.id}
+                      onClick={() => handleDeleteRsvp(rsvp.id)}
+                      title="Remove RSVP"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </li>
                 ))}
               </ul>

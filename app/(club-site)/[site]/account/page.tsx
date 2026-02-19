@@ -20,29 +20,63 @@ export default async function AccountPage({
   const club = await getClubBySubdomain(site);
 
   // Fetch membership for this club + user (single source of truth for profile)
-  let membership: { id: string; name: string | null; email: string | null; phone: string | null; avatar_url: string | null } | null = null;
+  type MembershipRow = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+    waiver_url: string | null;
+    waiver_signed_at: string | null;
+  };
+  let membership: MembershipRow | null = null;
+  let effectiveWaiverUrl: string | null = null;
+  let effectiveWaiverSignedAt: string | null = null;
   if (club?.id) {
     const { data } = await supabase
       .from("memberships")
-      .select("id, name, email, phone, avatar_url")
+      .select("id, name, email, phone, avatar_url, waiver_url, waiver_signed_at")
       .eq("club_id", club.id)
       .eq("auth_user_id", user.id)
       .maybeSingle();
-    membership = data as typeof membership;
+    membership = data as MembershipRow | null;
+    // Use memberships.waiver_url / waiver_signed_at if set; else fall back to latest waiver_submissions (for legacy submissions)
+    if (membership) {
+      const fromMembership = (membership.waiver_url?.trim() && membership.waiver_url) ? { url: membership.waiver_url, at: membership.waiver_signed_at ?? null } : null;
+      if (fromMembership) {
+        effectiveWaiverUrl = fromMembership.url;
+        effectiveWaiverSignedAt = fromMembership.at;
+      } else {
+        const { data: subList } = await supabase
+          .from("waiver_submissions")
+          .select("submitted_waiver_url, created_at")
+          .eq("membership_id", membership.id)
+          .not("submitted_waiver_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const ws = (subList as Array<{ submitted_waiver_url?: string | null; created_at?: string | null }> | null)?.[0] ?? null;
+        if (ws?.submitted_waiver_url?.trim()) {
+          effectiveWaiverUrl = ws.submitted_waiver_url;
+          effectiveWaiverSignedAt = ws.created_at ?? null;
+        }
+      }
+    }
   }
 
-  // Check waiver settings for club (enabled + required fields)
+  // Check waiver settings for club (enabled + template URL + required fields)
   let waiversEnabled = false;
   let requirePhoto = false;
+  let waiverTemplateUrl: string | null = null;
   if (club?.id) {
     const { data: waiverSettings } = await supabase
       .from("waiver_settings")
-      .select("is_enabled, require_photo")
+      .select("is_enabled, require_photo, waiver_url")
       .eq("club_id", club.id)
       .maybeSingle();
-    const ws = waiverSettings as { is_enabled?: boolean; require_photo?: boolean } | null;
+    const ws = waiverSettings as { is_enabled?: boolean; require_photo?: boolean; waiver_url?: string | null } | null;
     waiversEnabled = ws?.is_enabled ?? false;
     requirePhoto = ws?.require_photo ?? false;
+    waiverTemplateUrl = (typeof ws?.waiver_url === "string" && ws.waiver_url) ? ws.waiver_url : null;
   }
 
   return (
@@ -62,6 +96,9 @@ export default async function AccountPage({
           membership={membership}
           waiversEnabled={waiversEnabled}
           requirePhoto={requirePhoto}
+          waiverTemplateUrl={waiverTemplateUrl}
+          effectiveWaiverUrl={effectiveWaiverUrl}
+          effectiveWaiverSignedAt={effectiveWaiverSignedAt}
         />
         </div>
       </div>
