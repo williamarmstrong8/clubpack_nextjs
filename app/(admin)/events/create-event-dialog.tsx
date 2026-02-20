@@ -408,13 +408,14 @@ export function CreateEventDialog({
                     id="create-capacity"
                     type="number"
                     min={1}
-                    value={form.max_attendees}
-                    onChange={(e) =>
+                    value={form.max_attendees === 0 ? "" : form.max_attendees}
+                    onChange={(e) => {
+                      const raw = e.target.value
                       setForm((f) => ({
                         ...f,
-                        max_attendees: Number(e.target.value) || 0,
+                        max_attendees: raw === "" ? 0 : Math.max(0, Number(raw)),
                       }))
-                    }
+                    }}
                   />
                 </div>
               )}

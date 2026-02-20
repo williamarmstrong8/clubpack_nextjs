@@ -866,13 +866,14 @@ export function EventsClient({ events }: { events: EventRow[] }) {
                       id="edit-capacity"
                       type="number"
                       min={1}
-                      value={editForm.max_attendees}
-                      onChange={(e) =>
+                      value={editForm.max_attendees === 0 ? "" : editForm.max_attendees}
+                      onChange={(e) => {
+                        const raw = e.target.value
                         setEditForm((f) => ({
                           ...f,
-                          max_attendees: Number(e.target.value) || 0,
+                          max_attendees: raw === "" ? 0 : Math.max(0, Number(raw)),
                         }))
-                      }
+                      }}
                     />
                   </div>
                 )}
