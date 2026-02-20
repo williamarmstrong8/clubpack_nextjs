@@ -37,6 +37,16 @@ function formatEventTime(t: string | null) {
   return time;
 }
 
+/** Parse latitude/longitude from event (DB may return number or string). */
+function parseCoord(value: unknown): number | null {
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (!Number.isNaN(n)) return n;
+  }
+  return null;
+}
+
 export default async function EventPage({
   params,
 }: {
@@ -143,6 +153,10 @@ export default async function EventPage({
 
   const maxAttendees = typeof event.max_attendees === "number" ? event.max_attendees : null;
 
+  const eventLat = parseCoord(event.latitude);
+  const eventLng = parseCoord(event.longitude);
+  const hasMapCoords = eventLat !== null && eventLng !== null;
+
   return (
     <main className="flex-grow bg-white pt-28 pb-20">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
@@ -229,15 +243,14 @@ export default async function EventPage({
             }}
           />
 
-          {/* Map Card — shown when coordinates exist */}
-          {typeof event.latitude === "number" &&
-            typeof event.longitude === "number" && (
-              <EventMapCard
-                latitude={event.latitude}
-                longitude={event.longitude}
-                locationName={event.location_name}
-              />
-            )}
+          {/* Map Card — shown when coordinates exist (from Mapbox location picker) */}
+          {hasMapCoords && (
+            <EventMapCard
+              latitude={eventLat}
+              longitude={eventLng}
+              locationName={event.location_name}
+            />
+          )}
           </div>
         </div>
       </div>
