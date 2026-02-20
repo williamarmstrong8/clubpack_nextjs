@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Download, ExternalLink, FileText, FileUp, ImageIcon, Save } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Download, ExternalLink, FileText, FileUp, ImageIcon, Save, Trash2 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { uploadWaiverTemplate, upsertWaiverSettings } from "./actions"
+import { deleteWaiverSubmission, uploadWaiverTemplate, upsertWaiverSettings } from "./actions"
 
 type WaiverSubmissionRow = {
   id: string
@@ -54,6 +55,10 @@ export function WaiversClient({
   const [showUploadWaiver, setShowUploadWaiver] = React.useState(false)
   const [submissionsPage, setSubmissionsPage] = React.useState(1)
   const [selectedSubmission, setSelectedSubmission] = React.useState<WaiverSubmissionRow | null>(null)
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
+  const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const router = useRouter()
 
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(initial.submissions.length / pageSize))
@@ -316,7 +321,16 @@ export function WaiversClient({
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+      <Dialog
+          open={!!selectedSubmission}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedSubmission(null)
+              setDeleteError(null)
+              setConfirmDeleteId(null)
+            }
+          }}
+        >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -406,6 +420,60 @@ export function WaiversClient({
               {!selectedSubmission.submitted_waiver_url && !selectedSubmission.photo_url ? (
                 <p className="text-sm text-muted-foreground">No files for this submission.</p>
               ) : null}
+
+              {deleteError ? (
+                <p className="text-sm text-destructive">{deleteError}</p>
+              ) : null}
+
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+                {confirmDeleteId === selectedSubmission.id ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={deletingId === selectedSubmission.id}
+                      onClick={() => setConfirmDeleteId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={deletingId === selectedSubmission.id}
+                      onClick={async () => {
+                        if (!selectedSubmission?.id) return
+                        setDeleteError(null)
+                        setDeletingId(selectedSubmission.id)
+                        const result = await deleteWaiverSubmission(selectedSubmission.id)
+                        setDeletingId(null)
+                        setConfirmDeleteId(null)
+                        if (result.ok) {
+                          setSelectedSubmission(null)
+                          router.refresh()
+                        } else {
+                          setDeleteError(result.error)
+                        }
+                      }}
+                    >
+                      {deletingId === selectedSubmission.id ? "Deleting…" : "Yes, delete"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deletingId === selectedSubmission.id}
+                    onClick={() => {
+                      if (!selectedSubmission?.id) return
+                      setDeleteError(null)
+                      setConfirmDeleteId(selectedSubmission.id)
+                    }}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    Delete waiver & photo
+                  </Button>
+                )}
+              </div>
             </div>
           ) : null}
         </DialogContent>
