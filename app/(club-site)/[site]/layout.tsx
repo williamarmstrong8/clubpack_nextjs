@@ -22,9 +22,14 @@ export async function generateMetadata({
     (typeof club.logo_url === "string" && club.logo_url) ||
     (typeof club.logo === "string" && club.logo) ||
     null
+  const faviconUrl = clubLogo || "/clubpack-logo-site.png"
 
   return {
-    icons: clubLogo ? { icon: clubLogo } : { icon: "/clubpack-logo-site.png" },
+    icons: {
+      icon: [{ url: faviconUrl, sizes: "32x32" }, { url: faviconUrl, sizes: "16x16" }],
+      shortcut: faviconUrl,
+      apple: faviconUrl,
+    },
   }
 }
 

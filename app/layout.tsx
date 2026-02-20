@@ -16,7 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ClubPack",
   description: "The all-in-one platform for modern social clubs.",
-  icons: { icon: "/clubpack-logo-site.png" },
+  icons: {
+    icon: [
+      { url: "/clubpack-logo-site.png", type: "image/png", sizes: "32x32" },
+      { url: "/clubpack-logo-site.png", type: "image/png", sizes: "16x16" },
+    ],
+    shortcut: "/clubpack-logo-site.png",
+    apple: "/clubpack-logo-site.png",
+  },
 };
 
 export default function RootLayout({

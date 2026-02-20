@@ -21,6 +21,7 @@ export function LoginForm({ site }: { site: string }) {
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
+    formData.set("site", site);
     const result = await login(formData);
 
     if (result.error) {

@@ -31,13 +31,15 @@ export function SignupForm({ site }: { site: string }) {
       return;
     }
 
-    const result = await signup(formData);
+    const formDataWithSite = new FormData(event.currentTarget);
+    formDataWithSite.set("site", site);
+    const result = await signup(formDataWithSite);
 
     if (result.error) {
       setError(result.error);
       setLoading(false);
     } else {
-      // Redirect to onboarding page after successful signup
+      // Same flow for new users and existing users joining this club: complete profile on onboarding.
       router.push("/onboarding");
       router.refresh();
     }

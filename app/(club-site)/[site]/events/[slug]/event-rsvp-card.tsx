@@ -107,6 +107,7 @@ export function EventRsvpCard({
   const [pending, startTransition] = React.useTransition()
   const [message, setMessage] = React.useState<string | null>(null)
   const [showRsvpSuccessModal, setShowRsvpSuccessModal] = React.useState(false)
+  const [showAttendeesModal, setShowAttendeesModal] = React.useState(false)
 
   const rsvpNotYetOpen =
     !!rsvpOpenTime &&
@@ -150,7 +151,7 @@ export function EventRsvpCard({
     <div className="border border-gray-200 bg-white p-6 transition-all duration-300 hover:border-gray-300 lg:p-8">
       <h2 className="mb-4 text-lg font-bold tracking-tight text-gray-900">RSVPs</h2>
       <div className="space-y-4">
-        <div className="flex items-center">
+        <div className="flex items-center flex-wrap gap-2">
           <div className="flex -space-x-2">
             {displayRsvps.map((rsvp, index) => (
               <Avatar
@@ -165,10 +166,19 @@ export function EventRsvpCard({
               </Avatar>
             ))}
           </div>
-          <span className="ml-3 text-sm text-gray-600">
+          <span className="text-sm text-gray-600">
             {rsvps.length} {rsvps.length === 1 ? "person" : "people"} going
             {typeof maxAttendees === "number" ? ` · ${maxAttendees} spots` : ""}
           </span>
+          {isLoggedIn && rsvps.length > 0 && (
+            <Button
+              variant="link"
+              className="h-auto p-0 text-sm font-medium text-primary hover:text-primary/90"
+              onClick={() => setShowAttendeesModal(true)}
+            >
+              View all
+            </Button>
+          )}
         </div>
 
         {message && (
@@ -236,6 +246,31 @@ export function EventRsvpCard({
           </>
         )}
       </div>
+
+      <Dialog open={showAttendeesModal} onOpenChange={setShowAttendeesModal}>
+        <DialogContent className="sm:max-w-md border border-gray-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900">
+              Who&apos;s going
+            </DialogTitle>
+          </DialogHeader>
+          <ul className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+            {rsvps.map((rsvp) => (
+              <li key={rsvp.id} className="flex items-center gap-3">
+                <Avatar className="size-10 shrink-0 border border-gray-200">
+                  <AvatarImage src={rsvp.avatar_url ?? undefined} alt={rsvp.name ?? undefined} />
+                  <AvatarFallback className="bg-gray-200 text-gray-700 text-sm font-medium">
+                    {initials(rsvp.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-gray-900 truncate">
+                  {rsvp.name?.trim() || "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showRsvpSuccessModal} onOpenChange={setShowRsvpSuccessModal}>
         <DialogContent className="sm:max-w-xl border border-gray-200">
