@@ -190,6 +190,9 @@ export function AccountSettings({
     if (lower.includes("body exceeded") || lower.includes("size limit") || lower.includes("413")) {
       return "Your file is too large to submit. Keep the waiver under 10 MB and the photo under 5 MB, then try again.";
     }
+    if (lower.includes("unexpected response") || lower.includes("unexpected response was received")) {
+      return "The upload was too large or the server couldn’t process it. Use a waiver under 10 MB and a photo under 5 MB, then try again.";
+    }
     return raw;
   }
 

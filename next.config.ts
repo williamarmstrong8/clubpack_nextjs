@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       dynamic: 300,
       static: 300,
     },
+    // Allow waiver (10 MB) + photo (5 MB) uploads in account settings (default is 1 MB).
+    serverActions: {
+      bodySizeLimit: "16mb",
+    },
   },
   images: {
     // Allow Supabase Storage signed/public URLs for club hero images.
