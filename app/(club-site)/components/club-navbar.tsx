@@ -56,12 +56,15 @@ export function ClubNavbar({
   clubLogo,
   user,
   memberAvatarUrl,
+  variant,
 }: {
   site: string;
   clubName?: string | null;
   clubLogo?: string | null;
   user?: User | null;
   memberAvatarUrl?: string | null;
+  /** When "dark", use dark text for links, logo, and login (e.g. on events/about). When "light", use light text. When undefined, infer from pathname. */
+  variant?: "light" | "dark";
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -83,9 +86,10 @@ export function ClubNavbar({
   // Subdomain routing: links are /events, /about, etc. (no /site prefix)
   const base = "";
 
-  // Determine if we're on a page where navbar should be dark
+  // Determine if we're on a page where navbar should be dark (pathname or explicit variant)
   const isOnContentPage = pathname?.includes("/events") || pathname?.includes("/about") || pathname?.includes("/contact") || pathname?.includes("/policy") || pathname?.includes("/account");
-  const textColor = isOnContentPage ? 'text-foreground' : 'text-white';
+  const isDark = variant === "dark" || (variant !== "light" && isOnContentPage);
+  const textColor = isDark ? "text-foreground" : "text-white";
 
   const navItems: NavItem[] = useMemo(
     () => [
@@ -118,7 +122,7 @@ export function ClubNavbar({
               />
             ) : (
               <span className={cn("inline-flex size-8 items-center justify-center rounded-lg backdrop-blur-sm", 
-                isOnContentPage ? "bg-muted" : "bg-white/20 text-white"
+                isDark ? "bg-muted" : "bg-white/20 text-white"
               )}>
                 {initials}
               </span>
@@ -140,10 +144,10 @@ export function ClubNavbar({
                 prefetch={true}
                 className={cn(
                   "rounded-none px-4 py-2 text-sm font-medium transition-colors",
-                  isOnContentPage
+                  isDark
                     ? "text-muted-foreground hover:text-foreground hover:bg-muted"
                     : "text-white/80 hover:text-white hover:bg-white/10",
-                  active && (isOnContentPage ? "text-foreground font-bold" : "text-white font-bold")
+                  active && (isDark ? "text-foreground font-bold" : "text-white font-bold")
                 )}
               >
                 {item.label}
@@ -158,14 +162,14 @@ export function ClubNavbar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className={cn("relative size-9 rounded-full p-0", 
-                  isOnContentPage ? "hover:bg-muted" : "hover:bg-white/10"
+                  isDark ? "hover:bg-muted" : "hover:bg-white/10"
                 )}>
                   <Avatar className={cn("size-9 border", 
-                    isOnContentPage ? "border-border" : "border-white/20"
+                    isDark ? "border-border" : "border-white/20"
                   )}>
                     <AvatarImage src={memberAvatarUrl ?? undefined} alt="" />
                     <AvatarFallback className={cn("text-sm font-medium",
-                      isOnContentPage ? "bg-muted" : "bg-white/20 text-white"
+                      isDark ? "bg-muted" : "bg-white/20 text-white"
                     )}>
                       {getUserInitials(user)}
                     </AvatarFallback>
@@ -204,7 +208,7 @@ export function ClubNavbar({
             <>
               <Button asChild variant="ghost" className={cn(
                 "rounded-none",
-                isOnContentPage 
+                isDark 
                   ? "text-foreground hover:bg-muted"
                   : "text-white hover:bg-white/10 hover:text-white"
               )}>
@@ -221,7 +225,7 @@ export function ClubNavbar({
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open menu" className="text-white hover:bg-white/10">
+              <Button variant="ghost" size="icon" aria-label="Open menu" className={cn(isDark ? "text-foreground hover:bg-muted" : "text-white hover:bg-white/10")}>
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>

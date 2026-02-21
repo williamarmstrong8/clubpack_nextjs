@@ -115,7 +115,7 @@ export async function proxy(req: NextRequest) {
     "auth",
   ]);
 
-  const MARKETING_ROOT_SEGMENTS = new Set(["", "features", "pricing", "sponsors", "blog"]);
+  const MARKETING_ROOT_SEGMENTS = new Set(["", "features", "pricing", "sponsors", "blog", "tour"]);
 
   // CASE 1: Admin App (my.<rootDomain>)
   // Enforce that admin pages only render on the `my` subdomain.

@@ -4,6 +4,8 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+
+import { useAdminSidebarActive } from "./admin-sidebar-context"
 import {
   BarChart3,
   BookOpen,
@@ -64,6 +66,8 @@ const admin: NavItem[] = [
 
 function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname()
+  const activePathOverride = useAdminSidebarActive()
+  const pathForActive = activePathOverride ?? pathname
 
   return (
     <SidebarGroup>
@@ -72,8 +76,8 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
         <SidebarMenu>
           {items.map((item) => {
             const active = item.match
-              ? item.match(pathname)
-              : isRouteActive(pathname, item.href)
+              ? item.match(pathForActive)
+              : isRouteActive(pathForActive, item.href)
             const Icon = item.icon
 
             return (

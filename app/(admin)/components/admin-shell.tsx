@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { AdminSidebar } from "./admin-sidebar"
+import { AdminSidebarActiveProvider } from "./admin-sidebar-context"
 import { AdminUserMenu } from "./admin-user-menu"
 
 function getAdminTitle(pathname: string) {
@@ -37,17 +38,27 @@ export function AdminShell({
   children,
   user,
   memberCount = 0,
+  titleOverride,
+  sidebarActivePath,
+  hideMemberLimitBanner = false,
 }: {
   children: React.ReactNode
   user?: { name: string; role: string }
   memberCount?: number
+  /** When set (e.g. in tour/demo), use this instead of pathname-derived title */
+  titleOverride?: string
+  /** When set (e.g. in tour), sidebar highlights this path instead of pathname */
+  sidebarActivePath?: string | null
+  /** When true (e.g. in tour), do not show the over-limit upgrade banner */
+  hideMemberLimitBanner?: boolean
 }) {
   const pathname = usePathname()
-  const title = getAdminTitle(pathname)
-  const overLimit = memberCount > FREE_PLAN_MEMBER_LIMIT
+  const title = titleOverride ?? getAdminTitle(pathname)
+  const overLimit = !hideMemberLimitBanner && memberCount > FREE_PLAN_MEMBER_LIMIT
 
   return (
-    <SidebarProvider defaultOpen>
+    <AdminSidebarActiveProvider activePath={sidebarActivePath ?? null}>
+      <SidebarProvider defaultOpen>
       <Sidebar variant="inset" collapsible="icon">
         <AdminSidebar />
         <SidebarRail />
@@ -77,6 +88,7 @@ export function AdminShell({
         <div className="flex flex-1 flex-col p-4 md:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+    </AdminSidebarActiveProvider>
   )
 }
 

@@ -32,7 +32,7 @@ export default function HeroSection() {
             platform.
           </p>
 
-          <div className="flex justify-center mb-12">
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
             <Button
               asChild
               className="h-auto bg-[#0054f9] hover:bg-[#0040d6] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:ring-blue-500/50"
@@ -44,6 +44,13 @@ export default function HeroSection() {
               >
                 Start Building Free
               </a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+            >
+              <a href="/tour">Take a tour</a>
             </Button>
           </div>
         </div>

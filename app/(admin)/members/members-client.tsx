@@ -43,11 +43,14 @@ export function MembersClient({
   inviteUrl,
   newMembersThisMonth,
   adminCount,
+  totalMembers,
 }: {
   members: MemberRow[]
   inviteUrl: string
   newMembersThisMonth: number
   adminCount: number
+  /** When set (e.g. in tour/demo), use for Total members card instead of members.length */
+  totalMembers?: number
 }) {
   const [query, setQuery] = React.useState("")
   const [selectedMember, setSelectedMember] = React.useState<MemberRow | null>(null)
@@ -66,7 +69,7 @@ export function MembersClient({
     return matchesQuery
   })
 
-  const total = members.length
+  const total = totalMembers ?? members.length
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -128,7 +131,9 @@ export function MembersClient({
           <div>
             <CardTitle className="text-base">Member directory</CardTitle>
             <p className="text-sm text-muted-foreground">
-              {filtered.length} {filtered.length === 1 ? "result" : "results"}
+              {totalMembers != null
+                ? `${filtered.length} of ${total} ${total === 1 ? "result" : "results"}`
+                : `${filtered.length} ${filtered.length === 1 ? "result" : "results"}`}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
